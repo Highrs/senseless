@@ -1,0 +1,17 @@
+html, body {
+  background: #1a1a1a;
+  height: 100%;
+  margin:0;
+  overflow: hidden;
+  cursor: crosshair;
+}
+#content {
+  height: 100%;
+  margin: 0;
+}
+.panel {
+  display: block;
+  margin: auto;
+  position: relative;
+  background: #363636;
+}
