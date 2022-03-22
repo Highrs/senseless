@@ -15,3 +15,13 @@ html, body {
   position: relative;
   background: #363636;
 }
+.craftIcon {
+  fill: #363636;
+  stroke-width: 1px;
+}
+.red {
+  stroke: #dd3737;
+}
+.green {
+  stroke: #00ff66;
+}

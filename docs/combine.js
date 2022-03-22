@@ -1,4 +1,37 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+'use strict';
+
+const stringify = require('onml/stringify.js');
+
+exports.appendRend = (root, ml) => {
+  const content = (typeof root === 'string')
+    ? document.getElementById(root)
+    : root;
+
+  let str;
+  try {
+    str = stringify(ml);
+    content.innerHTML += str;
+  } catch (err) {
+    console.log(ml);
+  }
+};
+
+exports.normRend = (root, ml) => {
+  const content = (typeof root === 'string')
+    ? document.getElementById(root)
+    : root;
+
+  let str;
+  try {
+    str = stringify(ml);
+    content.innerHTML = str;
+  } catch (err) {
+    console.log(ml);
+  }
+};
+
+},{"onml/stringify.js":6}],2:[function(require,module,exports){
 module.exports = cfg => {
   cfg = cfg || {};
   cfg.w = cfg.w || 880;
@@ -14,10 +47,33 @@ module.exports = cfg => {
   }];
 };
 
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
+// const tt = require('onml/tt.js');
+
+module.exports = {
+
+  hull:         (crafto) => {
+    let drawnHull = ['g', {}];
+
+    drawnHull.push(
+      ['g', {},
+        ['circle', {
+          r: 10,
+          class: 'craftIcon ' + crafto.color
+        }]
+      ]
+    );
+
+    return drawnHull;
+  }
+};
+
+},{}],4:[function(require,module,exports){
 'use strict';
 const renderer = require('onml/renderer.js');
-// const advRenderer = require('./advRenderer.js');
+const icons = require('./icons.js');
+const advRenderer = require('./advRenderer.js');
+const tt = require('onml/tt.js');
 
 const getSvg = require('./get-svg.js');
 
@@ -28,23 +84,90 @@ const mkRndr = (place) => {
   return renderer(document.getElementById(place));
 };
 
+let drawMap = () => {
+  return getSvg({w:getPageWidth() - 10, h:getPageHeight() - 10 , i:'allTheStuff'}).concat([
+    ['defs'],
+    ['g', {id: 'map'},
+      ['g', {id: 'crafts'}]
+    ],
+
+  ]);
+};
+
+
+let craftList = [];
+
+const iDGenGen = () => {
+  let id = 0;
+  return () => {
+    id += 1;
+    return id;
+  };
+};
+
+const iDGen = iDGenGen();
+
+const makeCraft = (team = 0) => {
+  let id = iDGen();
+  advRenderer.appendRend('crafts', (['g', {id: 'C-' + id}]));
+
+  let crafto = {
+    id: id,
+    renderer: undefined,
+    drawer: undefined,
+    location: {x: 0, y: 0},
+    vector: {x: 0, y: 0},
+    color: 'green'
+  };
+
+  crafto.renderer = function () {
+    advRenderer.normRend('C-' + id, drawCraft(crafto));
+  };
+
+  if (team === 0) {
+    crafto.location.y = 100;
+  } else {
+    crafto.location.y = -100;
+    crafto.color = 'red';
+  }
+
+  return crafto;
+};
+
+const drawCraft = (crafto) => {
+  let drawnCraft = ['g', tt(crafto.location.x, crafto.location.y, {id: crafto.id})];
+
+  drawnCraft.push(icons.hull(crafto));
+
+  return drawnCraft;
+};
+
+const changeElementTT = (id, x, y) => {
+  document.getElementById(id).setAttribute(
+    'transform', 'translate(' + x + ', ' + y + ')'
+  );
+};
+
 const main = () => {
   console.log('Giant alien spiders are no joke.');
 
   let renderMain = mkRndr('content');
-  let drawMap = () => {
-    return getSvg({w:getPageWidth() - 10, h:getPageHeight() - 10 , i:'allTheStuff'}).concat([
-      ['defs'],
-      ['g', {id: 'main'}],
-      ['g', {id: 'ships'}]
-    ]);
-  };
   renderMain(drawMap());
+
+  craftList.push(makeCraft(0));
+  craftList.push(makeCraft(1));
+
+  craftList.forEach(e => {
+    e.renderer();
+  });
+
+  changeElementTT('map', getPageWidth()/2, getPageHeight()/2);
+  // console.log(craftList);
 };
 
 window.onload = main;
 
-},{"./get-svg.js":1,"onml/renderer.js":3}],3:[function(require,module,exports){
+},{"./advRenderer.js":1,"./get-svg.js":2,"./icons.js":3,"onml/renderer.js":5,"onml/tt.js":7}],5:[function(require,module,exports){
 'use strict';
 
 const stringify = require('./stringify.js');
@@ -69,7 +192,7 @@ module.exports = renderer;
 
 /* eslint-env browser */
 
-},{"./stringify.js":4}],4:[function(require,module,exports){
+},{"./stringify.js":6}],6:[function(require,module,exports){
 'use strict';
 
 const isObject = o => o && Object.prototype.toString.call(o) === '[object Object]';
@@ -162,4 +285,17 @@ function stringify (a, indentation) {
 
 module.exports = stringify;
 
-},{}]},{},[2]);
+},{}],7:[function(require,module,exports){
+'use strict';
+
+module.exports = (x, y, obj) => {
+  let objt = {};
+  if (x || y) {
+    const tt = [x || 0].concat(y ? [y] : []);
+    objt = {transform: 'translate(' + tt.join(',') + ')'};
+  }
+  obj = (typeof obj === 'object') ? obj : {};
+  return Object.assign(objt, obj);
+};
+
+},{}]},{},[4]);
