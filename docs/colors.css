@@ -20,8 +20,13 @@ html, body {
   stroke-width: 1px;
 }
 .red {
-  stroke: #dd3737;
+  stroke: #ff3c3c;
 }
 .green {
   stroke: #00ff66;
+}
+.spawnPoint {
+  fill: none;
+  stroke-width: 3px;
+  stroke-dasharray: 1 10;
 }
