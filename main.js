@@ -60,6 +60,7 @@ const makeCraft = (team = 0) => {
 
   let crafto = {
     id: id,
+    mapId: 'C-' + id,
     renderer: undefined,
     drawer: undefined,
     location: {x: 0, y: 0},
@@ -69,10 +70,10 @@ const makeCraft = (team = 0) => {
   };
 
   crafto.renderer = function () {
-    advRenderer.normRend('C-' + id, drawCraft(crafto));
+    advRenderer.normRend(crafto.mapId, drawCraft(crafto));
   };
 
-  if (team === 0) {
+  if (team === 1) {
     crafto.color = 'red';
   }
 
@@ -102,12 +103,12 @@ const makeCraft = (team = 0) => {
 };
 
 const spawnPoints = {
-  0: {x: 0, y: 500, r: 100, vx: 0, vy:-10, renderer: undefined, color: 'green'},
-  1: {x: 0, y:-500, r: 100, vx: 0, vy: 10, renderer: undefined, color: 'red'}
+  0: {x: 0, y: 400, r: 100, vx: 0, vy:-10, renderer: undefined, color: 'green'},
+  1: {x: 0, y:-400, r: 100, vx: 0, vy: 10, renderer: undefined, color: 'red'}
 };
 
 const drawCraft = (crafto) => {
-  let drawnCraft = ['g', tt(crafto.location.x, crafto.location.y, {id: crafto.id})];
+  let drawnCraft = ['g', {id: crafto.id}];
 
   drawnCraft.push(icons.hull(crafto));
 
@@ -131,6 +132,12 @@ const changeElementTT = (id, x, y) => {
   document.getElementById(id).setAttribute(
     'transform', 'translate(' + x + ', ' + y + ')'
   );
+};
+
+const calcMotion = (crafto, timeDelta) => {
+  ['x', 'y'].forEach(e => {
+      crafto.location[e] += crafto.vector[e] * timeDelta;
+    });
 };
 
 Window.options = {
@@ -165,10 +172,13 @@ const main = () => {
 
   craftList.push(makeCraft(0));
   craftList.push(makeCraft(1));
+  craftList.push(makeCraft(0));
+  craftList.push(makeCraft(1));
 
   craftList.forEach(e => {
     e.renderer();
   });
+
   [0,1].forEach(e => {
     let point = spawnPoints[e];
     point.renderer = function () { advRenderer.normRend('sp' + e, drawSpawn(point.x, point.y, point.r, point.color)); };
@@ -177,27 +187,30 @@ const main = () => {
 
   mapPan.x = getPageWidth()/2;
   mapPan.y = getPageHeight()/2;
-  changeElementTT('map', mapPan.x, getPageHeight()/2);
+  changeElementTT('map', mapPan.x, mapPan.y);
 
   let simpRate = 1 / 1000;
 
   let clockZero = performance.now();
-  let currentTime = Date.now();
+  // let currentTime = Date.now();
 
   const loop = () => {
     let time = performance.now();
     let timeDelta = time - clockZero;
     clockZero = time;
     let workTime = (timeDelta * options.rate * simpRate);
-    currentTime += workTime;
+    // currentTime += workTime;
 
     // console.log('here');
+    craftList.forEach(e => {
+      calcMotion(e, workTime);
+      changeElementTT(e.mapId, e.location.x, e.location.y);
+    });
+
 
     setTimeout(loop, 1000/options.targetFrames);
   };
   loop();
-
-  // console.log(craftList);
 };
 
 window.onload = main;
