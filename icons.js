@@ -9,7 +9,7 @@ module.exports = {
       ['g', {},
         ['circle', {
           r: 10,
-          class: 'craftIcon ' + crafto.color
+          class: 'craftIcon ' + crafto.team.color
         }]
       ]
     );

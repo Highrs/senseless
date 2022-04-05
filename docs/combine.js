@@ -59,7 +59,7 @@ module.exports = {
       ['g', {},
         ['circle', {
           r: 10,
-          class: 'craftIcon ' + crafto.color
+          class: 'craftIcon ' + crafto.team.color
         }]
       ]
     );
@@ -84,13 +84,13 @@ const mkRndr = (place) => {
   return renderer(document.getElementById(place));
 };
 
-let drawMap = () => {
+const drawMap = () => {
   return getSvg({w:getPageWidth() - 10, h:getPageHeight() - 10 , i:'allTheStuff'}).concat([
     ['defs'],
     ['g', {id: 'map'},
       ['g', {id: 'spawnPoints'},
-        ['g', {id: 'sp0'}],
-        ['g', {id: 'sp1'}]
+        ['g', {id: 'sp-green'}],
+        ['g', {id: 'sp-red'}]
       ],
       ['g', {id: 'crafts'}]
     ],
@@ -98,8 +98,8 @@ let drawMap = () => {
   ]);
 };
 
-
 let craftList = [];
+let deadCraftList = [];
 
 const iDGenGen = () => {
   let id = 0;
@@ -125,36 +125,38 @@ function rand(mean, deviation, prec = 0, upper = Infinity, lower = -Infinity) {
 
 const sqrt  = Math.sqrt;
 
-const makeCraft = (team = 0) => {
+const makeCraft = (teamColor = 'green') => {
   let id = iDGen();
-  advRenderer.appendRend('crafts', (['g', {id: 'C-' + id}]));
+  let mapID = 'C-' + id;
+  advRenderer.appendRend('crafts', (['g', {id: mapID}]));
 
   let crafto = {
     id: id,
-    mapId: 'C-' + id,
+    mapID: mapID,
     renderer: undefined,
-    drawer: undefined,
     location: {x: 0, y: 0},
     vector: {x: 0, y: 0},
-    team: team,
-    color: 'green'
+    team: teams[teamColor],
+    weaponsList: ['lance'],
+    weapons: [],
+    ranges: [],
+    health: 5,
+    status: 'normal'
   };
 
   crafto.renderer = function () {
-    advRenderer.normRend(crafto.mapId, drawCraft(crafto));
+    advRenderer.normRend(crafto.mapID, drawCraft(crafto));
   };
 
-  if (team === 1) {
-    crafto.color = 'red';
-  }
+  makeWeps(crafto);
 
-  const spawnPoint = spawnPoints[crafto.team];
+  const spawnPoint = crafto.team.spawnPoint;
 
   const genPoint = (point = {x: 0, y: 0}) => {
     point.x = rand(0, spawnPoint.r);
     point.y = rand(0, spawnPoint.r);
 
-    if ( sqrt((point.x * point.x) + (point.y * point.y)) > spawnPoint.r ) {
+    if ( calcRange({x:0, y:0}, point) > spawnPoint.r ) {
       genPoint(point);
     }
 
@@ -169,17 +171,45 @@ const makeCraft = (team = 0) => {
   crafto.vector.x = spawnPoint.vx;
   crafto.vector.y = spawnPoint.vy;
 
+  console.log(crafto);
+
+  craftList.push(crafto);
+  teams[teamColor].members.push(crafto);
 
   return crafto;
 };
 
 const spawnPoints = {
-  0: {x: 0, y: 400, r: 100, vx: 0, vy:-10, renderer: undefined, color: 'green'},
-  1: {x: 0, y:-400, r: 100, vx: 0, vy: 10, renderer: undefined, color: 'red'}
+  'green': {x: 0, y: 100, r: 100, vx: 0, vy:-10, renderer: undefined},
+  'red': {x: 0, y:-100, r: 100, vx: 0, vy: 10, renderer: undefined}
+};
+
+const teams = {
+  green: {color: 'green', spawnPoint: spawnPoints.green,  members: [], enemy: undefined},
+  red:   {color: 'red',   spawnPoint: spawnPoints.red,    members: [], enemy: undefined}
+};
+teams.green.enemy = teams.red;
+teams.red.enemy =   teams.green;
+
+const makeWeps = (crafto) => {
+  crafto.weaponsList.forEach(e => {
+    crafto.weapons.push(
+      {...weps[e], reloadProg: 0, counter: 0, status: 'ready', pulseProg: 0}
+    );
+    crafto.ranges.push(weps[e].range) ;
+  });
+};
+
+const weps = {
+  lance: {damage: 1, reloadTime: 3000, range: 100, pulseTime: 0.5}
 };
 
 const drawCraft = (crafto) => {
   let drawnCraft = ['g', {id: crafto.id}];
+
+  crafto.ranges.forEach(range => {
+    drawnCraft.push(['circle', {r: range, class: 'wepsRangeCircle ' + crafto.team.color}]);
+  });
 
   drawnCraft.push(icons.hull(crafto));
 
@@ -235,24 +265,56 @@ let mapPan = {
   }
 };
 
+const calcRange = (pt1, pt2) => {
+  const dx = pt1.x - pt2.x;
+  const dy = pt1.y - pt2.y;
+  return sqrt((dx * dx) + (dy * dy));
+};
+
+const wepsFire = (crafto, enemyo, wep, td) => {
+  // console.log(td);
+  switch (wep.status) {
+    case 'ready':
+      enemyo.health -= wep.damage;
+      wep.status = 'firing';
+      wep.counter += 1;
+      break;
+    case 'firing':
+      wep.pulseProg += td;
+      if (wep.pulseProg >= wep.pulseTime) {
+        wep.status = 'reloading';
+        wep.pulseProg = 0;
+      }
+      break;
+    case 'reloading':
+      wep.reloadProg += td;
+      if (wep.reloadProg >= wep.reloadTime) {
+        wep.status = 'ready';
+        wep.reloadProg = 0;
+      }
+      break;
+  }
+
+};
+
 const main = () => {
   console.log('Giant alien spiders are no joke.');
 
   let renderMain = mkRndr('content');
   renderMain(drawMap());
 
-  craftList.push(makeCraft(0));
-  craftList.push(makeCraft(1));
-  craftList.push(makeCraft(0));
-  craftList.push(makeCraft(1));
+  makeCraft('green');
+  makeCraft('red');
+  makeCraft('green');
+  makeCraft('red');
 
   craftList.forEach(e => {
     e.renderer();
   });
 
-  [0,1].forEach(e => {
+  ['green', 'red'].forEach(e => {
     let point = spawnPoints[e];
-    point.renderer = function () { advRenderer.normRend('sp' + e, drawSpawn(point.x, point.y, point.r, point.color)); };
+    point.renderer = function () { advRenderer.normRend('sp-' + e, drawSpawn(point.x, point.y, point.r, e)); };
     point.renderer();
   });
 
@@ -272,12 +334,31 @@ const main = () => {
     let workTime = (timeDelta * options.rate * simpRate);
     // currentTime += workTime;
 
-    // console.log('here');
-    craftList.forEach(e => {
-      calcMotion(e, workTime);
-      changeElementTT(e.mapId, e.location.x, e.location.y);
+    // console.log(craftList);
+
+    craftList.forEach(crafto => {
+      calcMotion(crafto, workTime);
+      changeElementTT(crafto.mapID, crafto.location.x, crafto.location.y);
+      crafto.team.enemy.members.forEach(enemyo => {
+        crafto.weapons.forEach(wep => {
+          if (calcRange(crafto.location, enemyo.location) < wep.range) {
+            wepsFire(crafto, enemyo, wep, timeDelta);
+          }
+        });
+      });
     });
 
+    craftList.forEach(crafto => {
+      if (crafto.health <= 0) {
+        deadCraftList.push(crafto);
+        craftList.splice(craftList.indexOf(crafto), 1);
+        advRenderer.normRend(crafto.mapID, []);
+
+        console.log(craftList);
+
+        // console.log('Ded');
+      }
+    });
 
     setTimeout(loop, 1000/options.targetFrames);
   };
