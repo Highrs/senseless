@@ -35,3 +35,19 @@ html, body {
   stroke-width: 0.25px;
   stroke-dasharray: 10 5;
 }
+.wepFire1 {
+  fill: none;
+  stroke: #ffbf00;
+  stroke-width: 1px;
+}
+.craftIconText {
+  font: 0.75rem B612 Mono;
+  stroke: none;
+  user-select: none;
+}
+.redFill {
+  fill: #ff3c3c;
+}
+.greenFill {
+  fill: #00ff66;
+}
