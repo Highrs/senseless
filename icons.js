@@ -3,15 +3,19 @@
 module.exports = {
 
   hull:         (crafto) => {
-    let drawnHull = ['g', {id: crafto.id + '-'}];
+    let drawnHull = ['g', {id: crafto.id + '-HULLICON'}];
+
+    let paint = 'craftIcon ' + crafto.team.color;
+
+    if (crafto.dead) {
+      paint = 'craftIcon ' + crafto.team.color + 'Dead';
+    }
 
     drawnHull.push(
-      ['g', {},
-        ['circle', {
-          r: 5,
-          class: 'craftIcon ' + crafto.team.color
-        }]
-      ]
+      ['circle', {
+        r: 5,
+        class: paint
+      }]
     );
 
     return drawnHull;

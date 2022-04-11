@@ -25,6 +25,12 @@ html, body {
 .green {
   stroke: #00ff66;
 }
+.redDead {
+  stroke: #771c1c;
+}
+.greenDead {
+  stroke: #006e2c;
+}
 .spawnPoint {
   fill: none;
   stroke-width: 3px;
@@ -32,6 +38,7 @@ html, body {
 }
 .wepsRangeCircle {
   fill: none;
+  fill-opacity: 0.01;
   stroke-width: 0.25px;
   stroke-dasharray: 10 5;
 }
