@@ -13,7 +13,7 @@ module.exports = {
 
     drawnHull.push(
       ['circle', {
-        r: 5,
+        r: 3,
         class: paint
       }]
     );

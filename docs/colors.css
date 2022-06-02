@@ -39,7 +39,7 @@ html, body {
 .wepsRangeCircle {
   fill: none;
   fill-opacity: 0.01;
-  stroke-width: 0.25px;
+  stroke-width: 0.15px;
   stroke-dasharray: 10 5;
 }
 .wepFire1 {

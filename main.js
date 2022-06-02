@@ -73,7 +73,7 @@ const makeCraft = (teamColor = 'green') => {
   advRenderer.appendRend('crafts', (['g', {id: mapID}]));
 
   let crafto = {
-    id: id,
+    id: teamColor[0] + id,
     mapID: mapID,
     renderer: undefined,
     location: {x: 0, y: 0},
@@ -104,22 +104,23 @@ const makeCraft = (teamColor = 'green') => {
   crafto.vector.x = spawnPoint.vx;
   crafto.vector.y = spawnPoint.vy;
 
-  console.log(crafto);
 
   craftList.push(crafto);
   teams[teamColor].members.push(crafto);
+
+  console.log(crafto);
 
   return crafto;
 };
 
 const spawnPoints = {
-  'green': {x: 0, y: 150, r: 100, vx: 0, vy:-10, renderer: undefined},
-  'red': {x: 0, y:-150, r: 100, vx: 0, vy: 10, renderer: undefined}
+  'green': {x: 250, y: 250, r: 100, vx: -10, vy:-10, renderer: undefined},
+  'red': {x: -250, y:-250, r: 200, vx: 10, vy: 10, renderer: undefined}
 };
 
 const teams = {
-  green: {color: 'green', spawnPoint: spawnPoints.green,  members: [], enemy: undefined},
-  red:   {color: 'red',   spawnPoint: spawnPoints.red,    members: [], enemy: undefined}
+  green: {color: 'green', spawnPoint: spawnPoints.green,  members: [], enemy: undefined, kills: 0, losses: 0},
+  red:   {color: 'red',   spawnPoint: spawnPoints.red,    members: [], enemy: undefined, kills: 0, losses: 0}
 };
 teams.green.enemy = teams.red;
 teams.red.enemy =   teams.green;
@@ -169,7 +170,7 @@ const drawWep = (wepo) => {
 };
 
 const weps = {
-  lance: {damage: 1, reloadTime: 3000, range: 100, pulseTime: 1000}
+  lance: {damage: 1, reloadTime: 5000, range: 100, pulseTime: 2000}
 };
 
 const drawCraft = (crafto) => {
@@ -269,19 +270,23 @@ const wepsFire = (wep, td) => {
 
   switch (wep.status) {
     case 'ready':
-      console.log(crafto.id + ' fires on ' + enemyo.id);
       updateWepLine(crafto, enemyo, wep);
       unhide(wep.mapID);
 
       enemyo.health -= wep.damage;
       wep.status = 'firing';
       wep.counter += 1;
+      console.log(crafto.id + ' fires on ' + enemyo.id + ',  HP:' + enemyo.health);
+
+      if (enemyo.health <= 0) {killCraft(enemyo);}
+
       break;
     case 'firing':
       wep.pulseProg += td;
       if (wep.pulseProg >= wep.pulseTime) {
         wep.status = 'reloading';
         wep.pulseProg = 0;
+        wep.target = {};
         hide(wep.mapID);
       }
       updateWepLine(crafto, enemyo, wep);
@@ -310,14 +315,30 @@ const makeManyCraft = (number, color) => {
   }
 };
 
+const killCraft = (crafto) => {
+    crafto.dead = true;
+    crafto.team.losses += 1;
+    crafto.team.enemy.kills += 1;
+
+    deadCraftList.push(crafto);
+    craftList.splice(craftList.indexOf(crafto), 1);
+    crafto.team.members.splice(crafto.team.members.indexOf(crafto), 1);
+    crafto.weapons.forEach(wep => {
+      hide(wep.mapID);
+    });
+    crafto.renderer();
+
+    console.log(crafto.id + ' destroyed');
+};
+
 const main = () => {
   console.log('Giant alien spiders are no joke.');
 
   let renderMain = mkRndr('content');
   renderMain(drawMap());
 
-  makeManyCraft(10, 'green');
-  makeManyCraft(20, 'red');
+  makeManyCraft(20, 'green');
+  makeManyCraft(30, 'red');
 
   craftList.forEach(e => {
     e.renderer();
@@ -345,56 +366,30 @@ const main = () => {
     let workTime = (timeDelta * options.rate * simpRate);
     // currentTime += workTime;
 
-    // console.log(craftList);
-
     craftList.forEach(crafto => {
       calcMotion(crafto, workTime);
       changeElementTT(crafto.mapID, crafto.location.x, crafto.location.y);
-
-      crafto.weapons.forEach(wep => {
-
+      return crafto.weapons.find(wep => {
         if (wep.status === 'ready') {
-
-          crafto.team.enemy.members.forEach(enemyo => {
-
+          return crafto.team.enemy.members.find(enemyo => {
             let range = calcRange(crafto.location, enemyo.location);
-
             if (
               range < wep.range
             ) {
-              // SET WEP SOURCE AND TARGET AND KEEP IT THE SAME WHILE FIRING
               wep.target = enemyo;
               wepsFire(wep, timeDelta);
+              return wep.target;
             }
-
           });
-
         } else if (wep.status === 'firing' || wep.status === 'reloading') {
-
           wepsFire(wep, timeDelta);
-
         }
-
       });
-
     });
 
-    craftList.forEach(crafto => {
-      if (crafto.health <= 0) {
-
-        crafto.dead = true;
-        console.log(crafto.id + ' destroyed');
-
-        deadCraftList.push(crafto);
-        craftList.splice(craftList.indexOf(crafto), 1);
-        crafto.team.members.splice(crafto.team.members.indexOf(crafto), 1);
-        crafto.weapons.forEach(wep => {
-          hide(wep.mapID);
-        });
-        crafto.renderer();
-
-      }
-    });
+    // craftList.forEach(crafto => {
+    //   if (crafto.health <= 0) {killCraft(crafto);}
+    // });
 
     setTimeout(loop, 1000/options.targetFrames);
   };
