@@ -1,10 +1,12 @@
 'use strict';
 const renderer = require('onml/renderer.js');
+const Stats = require('stats.js');
 
 const advRenderer = require('./advRenderer.js');
 
 const hullTemps = require('./hullTemp.js');
 const drawMap = require('./drawMap.js');
+
 
 function getPageWidth() {return document.body.clientWidth;}
 function getPageHeight() {return document.body.clientHeight;}
@@ -198,7 +200,7 @@ const calcMotion = (crafto, timeDelta) => {
 
 Window.options = {
   rate: 1,
-  targetFrames: 30,
+  targetFrames: 60,
 };
 const options = Window.options;
 
@@ -301,6 +303,7 @@ const main = () => {
 
   let renderMain = mkRndr('content');
   renderMain(drawMap.drawPage());
+
   advRenderer.normRend('windowFrame', drawMap.drawWindowFrame());
 
   makeManyCraft('arrow', 3, 'player');
@@ -334,7 +337,18 @@ const main = () => {
   let clockZero = performance.now();
   // let currentTime = Date.now();
 
+  //Stats FPS tracking
+  var stats = new Stats();
+  stats.dom.style.left = "";
+  stats.dom.style.right = '0px';
+  console.log(stats.dom);
+  stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+  document.body.appendChild( stats.dom );
+
   const loop = () => {
+
+    stats.begin(); //Stats FPS tracking
+
     let time = performance.now();
     let timeDelta = time - clockZero;
     clockZero = time;
@@ -372,8 +386,13 @@ const main = () => {
       changeElementTT(crafto.mapID, crafto.location.x, crafto.location.y);
     });
 
+    stats.end(); //Stats FPS tracking
+
     setTimeout(loop, 1000/options.targetFrames);
   };
+
+
+
   loop();
 };
 
