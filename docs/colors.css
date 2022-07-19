@@ -1,4 +1,4 @@
-html, body {
+playerhtml, body {
   background: #1a1a1a;
   height: 100%;
   margin:0;
@@ -19,16 +19,16 @@ html, body {
   fill: #363636;
   stroke-width: 1px;
 }
-.red {
+.enemy {
   stroke: #ff3c3c;
 }
-.green {
+.player {
   stroke: #00ff66;
 }
-.redDead {
+.enemyDead {
   stroke: #771c1c;
 }
-.greenDead {
+.playerDead {
   stroke: #006e2c;
 }
 .spawnPoint {
@@ -42,19 +42,60 @@ html, body {
   stroke-width: 0.15px;
   stroke-dasharray: 10 5;
 }
+.wepFire0 {
+  fill: none;
+  stroke: #b700ff;
+  stroke-width: 1px;
+}
 .wepFire1 {
   fill: none;
   stroke: #ffbf00;
   stroke-width: 1px;
+}
+.wepFire2 {
+  fill: none;
+  stroke: #00d7ff;
+  stroke-width: 2px;
 }
 .craftIconText {
   font: 0.75rem B612 Mono;
   stroke: none;
   user-select: none;
 }
-.redFill {
+.enemyFill {
   fill: #ff3c3c;
 }
-.greenFill {
+.playerFill {
   fill: #00ff66;
+}
+.standardSelector {
+  fill: none;
+  stroke: none;
+}
+.standardSelector:hover {
+  stroke: #ffb500;
+  stroke-width: 2px;
+}
+.invisibleBox {
+  fill: rgba(175, 128, 168, 0);
+  stroke: none;
+}
+.frame {
+  fill: none;
+  stroke-width: 1px;
+  stroke: #ffffffff;
+}
+.standardBoxSelectable {
+  fill: #363636;
+  stroke-width: 1px;
+  stroke: #ffffffff;
+}
+.standardBoxSelectable:hover {
+  stroke: #ffb500;
+  stroke-width: 2px;
+}
+.UIcon {
+  fill: #363636;
+  stroke-width: 3px;
+  stroke: #ffffffff;
 }

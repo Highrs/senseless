@@ -31,7 +31,138 @@ exports.normRend = (root, ml) => {
   }
 };
 
-},{"onml/stringify.js":6}],2:[function(require,module,exports){
+},{"onml/stringify.js":8}],2:[function(require,module,exports){
+const getSvg = require('./get-svg.js');
+const tt = require('onml/tt.js');
+const icons = require('./icons.js');
+
+function getPageWidth() {return Math.max(document.body.clientWidth, window.innerWidth);}
+function getPageHeight() {return Math.max(document.body.clientHeight, window.innerHeight);}
+
+exports.drawCraft = (crafto) => {
+  let drawnCraft = ['g', {id: crafto.id}];
+
+  drawnCraft.push(
+    ['g', {
+        transform: 'rotate(' + crafto.course + ')',
+        id: crafto.id + '-ROT'
+      },
+      icons.craft(crafto)
+    ]
+  );
+
+  if (!crafto.dead) {
+    drawnCraft.push(
+      ['text', {
+        x: 5,
+        y: 5,
+        class: 'craftIconText ' + crafto.team.color +'Fill'
+      },
+        crafto.id
+      ]
+    );
+  }
+
+  drawnCraft.push(
+    icons.brackets(crafto.id, 2)
+  );
+
+  return drawnCraft;
+};
+
+exports.drawWepRanges = (crafto) => {
+  let drawnRanges = ['g', {id: crafto.id + '-WEPRANGE'}];
+  crafto.ranges.forEach(range => {
+    drawnRanges.push(['circle', {
+      r: range,
+      class: 'wepsRangeCircle ' + crafto.team.color + ' ' + crafto.team.color +'Fill'
+    }]);
+  });
+  return drawnRanges;
+};
+
+exports.drawWep = (wepo) => {
+  let drawnWep = ['g', {}];
+
+  drawnWep.push(
+    ['line', {
+      id: wepo.mapID + '-LINE',
+      x1: 0,
+      y1: 0,
+      x2: 100,
+      y2: 100,
+      class: wepo.color
+    }]
+  );
+
+  return drawnWep;
+};
+exports.drawSpawn = (x, y, r, color) => {
+  let drawnPoint = ['g', tt(x, y)];
+
+  drawnPoint.push(
+    ['circle', {
+      r: r,
+      class:  'spawnPoint ' + color
+    }]
+  );
+
+  return drawnPoint;
+};
+
+exports.drawWindowFrame = () => {
+  let frame = ['g', {},
+    ['path',
+      { d: 'M 40, 2 L 2, 2 L 2, 40',
+      class: 'frame' }],
+    ['path',
+      { d: 'M ' + (getPageWidth() - 40) + ', 2 L ' + (getPageWidth() - 2) + ', 2 L ' + (getPageWidth() - 2) + ', 40',
+      class: 'frame' }],
+    ['path',
+      { d: 'M ' + (getPageWidth() - 40) + ', ' + (getPageHeight() - 2) + ' L ' + (getPageWidth() - 2) + ', ' + (getPageHeight() - 2) + ' L ' + (getPageWidth() - 2) + ', ' + (getPageHeight() - 40) + '',
+      class: 'frame' }],
+    ['path',
+      { d: 'M 40, ' + (getPageHeight() - 2) + ' L 2, ' + (getPageHeight() - 2) + ' L 2, ' + (getPageHeight() - 40) + '',
+      class: 'frame' }]
+    ];
+
+    frame.push( ['g', tt(4,4),
+      ['g', tt(0, 0, {id:'buttonSettings', class: 'standardBoxSelectable'}),
+        ['rect', {width: 30, height: 30}],
+        ['g', tt(15,15),
+          ['path', {d:'M 12 -9 -12 -9', class:'UIcon'}],
+          ['path', {d:'M 12 0 -12 0', class:'UIcon'}],
+          ['path', {d:'M 12 9 -12 9', class:'UIcon'}],
+        ]
+      ]
+    ]);
+    frame.push( ['g', tt(4,38),
+      ['g', tt(0, 0, {id:'button', class: 'standardBoxSelectable'}),
+        ['rect', {width: 30, height: 30}],
+      ]
+    ]);
+
+  return frame;
+};
+
+exports.drawPage = () => {
+
+  return getSvg({w:getPageWidth(), h:getPageHeight() , i:'allTheStuff'}).concat([
+    ['defs'],
+    ['g', {id: 'windowFrame'}],
+    ['g', {id: 'map'},
+      ['g', {id: 'wepsRanges'}],
+      ['g', {id: 'spawnPoints'},
+        ['g', {id: 'sp-player'}],
+        ['g', {id: 'sp-enemy'}]
+      ],
+      ['g', {id: 'weps'}],
+      ['g', {id: 'crafts'}]
+    ]
+  ]);
+};
+
+},{"./get-svg.js":3,"./icons.js":5,"onml/tt.js":9}],3:[function(require,module,exports){
 module.exports = cfg => {
   cfg = cfg || {};
   cfg.w = cfg.w || 880;
@@ -47,13 +178,80 @@ module.exports = cfg => {
   }];
 };
 
-},{}],3:[function(require,module,exports){
-// const tt = require('onml/tt.js');
+},{}],4:[function(require,module,exports){
+module.exports = {
+  arrow: () => ({
+    class: 'Arrow',
+    abr: 'ARR',
+    type: 'combat',
+    cargoCap: 1,
+    fuelCapacity: 50,
+    fuelConsumption: 0.1,
+    accel: 5,
+    home: 'astroDeltaB',
+    weaponsList: ['Lance'],
+    health: 5
+  }),
+
+  bolt: () => ({
+    class: 'Bolt',
+    abr: 'BLT',
+    type: 'combat',
+    cargoCap: 1,
+    fuelCapacity: 50,
+    fuelConsumption: 0.1,
+    accel: 5,
+    home: 'astroDeltaB',
+    weaponsList: ['Lance'],
+    health: 8
+  }),
+
+  swarmer: () => ({
+    class: 'Swarmer',
+    abr: 'SWM',
+    type: 'combat',
+    cargoCap: 0,
+    fuelCapacity: 50,
+    fuelConsumption: 0.1,
+    accel: 5,
+    home: 'astroDeltaB',
+    weaponsList: ['MiniLance'],
+    health: 3
+  }),
+
+  spear: () => ({
+    class: 'Spear',
+    abr: 'SPR',
+    type: 'combat',
+    cargoCap: 1,
+    fuelCapacity: 50,
+    fuelConsumption: 0.1,
+    accel: 5,
+    home: 'astroDeltaB',
+    weaponsList: ['SuperLance', 'Lance'],
+    health: 20
+  }),
+};
+
+},{}],5:[function(require,module,exports){
+const tt = require('onml/tt.js');
 
 module.exports = {
+  craft: (crafto) => {
+    const icono = {
+      Arrow: 'M 0, 0 L  3,-3 L  0, 5 L -3,-3 Z',
+      Bolt:  'M 0,-5 L  3,-3 L  0, 5 L -3,-3 Z',
+      Spear: 'M 0,-5 L -2,-2 L -6, 0 L -3, 2 L -2, 5 L -1, 8 L 0, 10 L 1,8 L 2, 5 L 3, 2 L 6, 0 L 2,-2 Z'
+    };
 
-  hull:         (crafto) => {
-    let drawnHull = ['g', {id: crafto.id + '-HULLICON'}];
+    let iconString =
+      icono[crafto.class] ?
+      icono[crafto.class] :
+      'M 0,3 L 3,0 L 0,-3 L -3,0 Z';
+
+
+
+    let drawnHull = ['g', {}];
 
     let paint = 'craftIcon ' + crafto.team.color;
 
@@ -62,24 +260,43 @@ module.exports = {
     }
 
     drawnHull.push(
-      ['circle', {
-        r: 3,
+      ['path', {
+        //transform: 'scale(2, 2)',
+        d: iconString,
         class: paint
       }]
     );
 
     return drawnHull;
+  },
+  brackets:     (iD, margin = 0, offsetY = 0) => {
+    let corner = 10 + margin;
+    let sides = corner - 5;
+    return ['g', tt(0, offsetY, {class: 'standardSelector', id:iD + '-SELECTOR'}),
+      ['rect', {
+        x:-corner,
+        y:-corner,
+        height: corner*2,
+        width: corner*2,
+        class: 'invisibleBox'
+      }],
+      ['path', {d: 'M  '+corner+',  '+sides+' L  '+corner+',  '+corner+' L  '+sides+',  '+corner}],
+      ['path', {d: 'M -'+corner+', -'+sides+' L -'+corner+', -'+corner+' L -'+sides+', -'+corner}],
+      ['path', {d: 'M  '+corner+', -'+sides+' L  '+corner+', -'+corner+' L  '+sides+', -'+corner}],
+      ['path', {d: 'M -'+corner+',  '+sides+' L -'+corner+',  '+corner+' L -'+sides+',  '+corner}]
+    ];
   }
+
 };
 
-},{}],4:[function(require,module,exports){
+},{"onml/tt.js":9}],6:[function(require,module,exports){
 'use strict';
 const renderer = require('onml/renderer.js');
-const icons = require('./icons.js');
-const advRenderer = require('./advRenderer.js');
-const tt = require('onml/tt.js');
 
-const getSvg = require('./get-svg.js');
+const advRenderer = require('./advRenderer.js');
+
+const hullTemps = require('./hullTemp.js');
+const drawMap = require('./drawMap.js');
 
 function getPageWidth() {return document.body.clientWidth;}
 function getPageHeight() {return document.body.clientHeight;}
@@ -88,34 +305,20 @@ const mkRndr = (place) => {
   return renderer(document.getElementById(place));
 };
 
-const drawMap = () => {
-  return getSvg({w:getPageWidth() - 10, h:getPageHeight() - 10 , i:'allTheStuff'}).concat([
-    ['defs'],
-    ['g', {id: 'map'},
-      ['g', {id: 'spawnPoints'},
-        ['g', {id: 'sp-green'}],
-        ['g', {id: 'sp-red'}]
-      ],
-      ['g', {id: 'weps'}],
-      ['g', {id: 'crafts'}]
-    ],
-
-  ]);
-};
-
 let craftList = [];
 let deadCraftList = [];
 
-const iDGenGen = () => {
+const iDerGenGen  = (prefix) => {
   let id = 0;
   return () => {
     id += 1;
-    return id;
+    return prefix + '-' + id;
   };
 };
-
-const iDGen = iDGenGen();
-const iDWepGen = iDGenGen();
+const craftNamer  = iDerGenGen('HULL');
+const craftIDer   = iDerGenGen('C');
+//const iDGen     = iDerGenGen();
+const iDWepGen    = iDerGenGen('W');
 
 function rand(mean, deviation, prec = 0, upper = Infinity, lower = -Infinity) {
   let max = mean + deviation > upper ? upper : mean + deviation;
@@ -141,69 +344,110 @@ const genPoint = (spawnPoint, point = {x: 0, y: 0}) => {
 
   return point;
 };
-
-const makeCraft = (teamColor = 'green') => {
-  let id = iDGen();
-  let mapID = 'C-' + id;
+const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
+  //(crafto, name, id, owner = 'EMPIRE')
+  const initWait = 10;
   advRenderer.appendRend('crafts', (['g', {id: mapID}]));
+  advRenderer.appendRend('wepsRanges', (['g', {id: mapID + '-WEPS-RANGE'}]));
 
-  let crafto = {
-    id: teamColor[0] + id,
-    mapID: mapID,
-    renderer: undefined,
-    location: {x: 0, y: 0},
-    vector: {x: 0, y: 0},
-    team: teams[teamColor],
-    weaponsList: ['lance'],
-    weapons: [],
-    ranges: [],
-    health: 5,
-    status: 'normal',
-    dead: false
+  let newCrafto = Object.assign(
+    crafto,
+    {
+      id: owner[0] + id,
+      mapID: mapID,
+
+      renderer: undefined,
+      wepsRangeRenderer: undefined,
+
+      location: {x: 0, y: 0, z: 0},
+      vector: {x: 0, y: 0, z: 0},
+      team: teams[owner],
+
+      weapons: [],
+      ranges: [],
+
+      status: 'normal',
+      dead: false,
+
+      name: name,
+      speed: 0,
+      course: 0,
+      accelStat: 0,
+      intercept: {},
+      route: [],
+      lastStop: [],
+      cargo: {},
+      fuel: crafto.fuelCapacity,
+      owner: owner,
+      waitCycle: 0 + initWait,
+      render: false,
+      visible: true,
+
+      state: 'stopped'
+    }
+  );
+
+  newCrafto.renderer = function () {
+    advRenderer.normRend(mapID, drawMap.drawCraft(newCrafto));
+  };
+  newCrafto.wepsRangeRenderer = function () {
+    advRenderer.normRend(mapID + '-WEPS-RANGE', drawMap.drawWepRanges(newCrafto));
   };
 
-  crafto.renderer = function () {
-    advRenderer.normRend(mapID, drawCraft(crafto));
-  };
+  makeWeps(newCrafto);
 
-  makeWeps(crafto);
-
-  const spawnPoint = crafto.team.spawnPoint;
+  const spawnPoint = newCrafto.team.spawnPoint;
 
 
   let point = genPoint(spawnPoint);
 
-  crafto.location.x = point.x + spawnPoint.x;
-  crafto.location.y = point.y + spawnPoint.y;
+  newCrafto.location.x = point.x + spawnPoint.x;
+  newCrafto.location.y = point.y + spawnPoint.y;
 
-  crafto.vector.x = spawnPoint.vx;
-  crafto.vector.y = spawnPoint.vy;
+  newCrafto.vector.x = spawnPoint.vx;
+  newCrafto.vector.y = spawnPoint.vy;
 
+  calcCourse(newCrafto, newCrafto.vector);
 
-  craftList.push(crafto);
-  teams[teamColor].members.push(crafto);
+  craftList.push(newCrafto);
+  teams[owner].members.push(newCrafto);
 
   console.log(crafto);
 
-  return crafto;
+  return newCrafto;
+};
+const calcCourse = (crafto, targeto) => {
+  crafto.course = (Math.atan2(targeto.y, targeto.x) * 180 / Math.PI) - 90;
+};
+const makeManyCraft = (craftType, numberToMake, owner = undefined) => {
+  for (let i = 0; i < numberToMake; i++) {
+    const baseTemplate = hullTemps[craftType]();
+    const name = craftNamer();
+    const id = craftIDer();
+    const mapID = id + '-MID';
+
+    makeCraft(baseTemplate, name, id, mapID, owner);
+
+    console.log('Made ' + name + ' (' + id + ')');
+  }
 };
 
 const spawnPoints = {
-  'green': {x: 250, y: 250, r: 100, vx: -10, vy:-10, renderer: undefined},
-  'red': {x: -250, y:-250, r: 200, vx: 10, vy: 10, renderer: undefined}
+  'player':  {x: 150,  y: 150, r: 50,  vx: -10, vy:-10, renderer: undefined},
+  'enemy':    {x: -150, y:-150, r: 100,  vx: 10,  vy: 10, renderer: undefined}
 };
 
 const teams = {
-  green: {color: 'green', spawnPoint: spawnPoints.green,  members: [], enemy: undefined, kills: 0, losses: 0},
-  red:   {color: 'red',   spawnPoint: spawnPoints.red,    members: [], enemy: undefined, kills: 0, losses: 0}
+  player: {color: 'player', spawnPoint: spawnPoints.player,  members: [], enemy: undefined, kills: 0, losses: 0},
+  enemy:   {color: 'enemy',   spawnPoint: spawnPoints.enemy,    members: [], enemy: undefined, kills: 0, losses: 0}
 };
-teams.green.enemy = teams.red;
-teams.red.enemy =   teams.green;
+teams.player.enemy = teams.enemy;
+teams.enemy.enemy =   teams.player;
 
 const makeWeps = (crafto) => {
   crafto.weaponsList.forEach(e => {
     let id = iDWepGen();
-    let mapID = 'W-' + id;
+    let mapID = id;
     let wepo = {
       id: id,
       mapID: mapID,
@@ -219,7 +463,7 @@ const makeWeps = (crafto) => {
     crafto.ranges.push(weps[e].range) ;
     advRenderer.appendRend('weps', (['g', {id: mapID}]));
     wepo.renderer = function () {
-      advRenderer.normRend(mapID, drawWep(wepo));
+      advRenderer.normRend(mapID, drawMap.drawWep(wepo));
     };
     wepo.renderer();
     hide(wepo.mapID);
@@ -227,66 +471,10 @@ const makeWeps = (crafto) => {
   });
 };
 
-const drawWep = (wepo) => {
-  let drawnWep = ['g', {}];
-
-  drawnWep.push(
-    ['line', {
-      id: wepo.mapID + '-LINE',
-      x1: 0,
-      y1: 0,
-      x2: 100,
-      y2: 100,
-      class: 'wepFire1'
-    }]
-  );
-
-  return drawnWep;
-};
-
 const weps = {
-  lance: {damage: 1, reloadTime: 5000, range: 100, pulseTime: 2000}
-};
-
-const drawCraft = (crafto) => {
-  let drawnCraft = ['g', {id: crafto.id}];
-
-  if (crafto.dead) {
-
-    drawnCraft.push(icons.hull(crafto));
-
-  } else {
-
-    crafto.ranges.forEach(range => {
-      drawnCraft.push(['circle', {r: range, class: 'wepsRangeCircle ' + crafto.team.color + ' ' + crafto.team.color +'Fill'}]);
-    });
-
-    drawnCraft.push(icons.hull(crafto));
-    drawnCraft.push(['text', {
-      x: 5,
-      y: 5,
-      class: 'craftIconText ' + crafto.team.color +'Fill'
-    },
-      crafto.id
-    ]);
-
-  }
-
-  return drawnCraft;
-
-};
-
-const drawSpawn = (x, y, r, color) => {
-  let drawnPoint = ['g', tt(x, y)];
-
-  drawnPoint.push(
-    ['circle', {
-      r: r,
-      class:  'spawnPoint ' + color
-    }]
-  );
-
-  return drawnPoint;
+  MiniLance:  {damage: 1, range: 50,  reloadTime: 100,  pulseTime: 100,  color: "wepFire0"},
+  Lance:      {damage: 2, range: 100, reloadTime: 1000, pulseTime: 1000, color: "wepFire1"},
+  SuperLance: {damage: 3, range: 300, reloadTime: 5000, pulseTime: 1000, color: "wepFire2"}
 };
 
 const changeElementTT = (id, x, y) => {
@@ -294,7 +482,6 @@ const changeElementTT = (id, x, y) => {
     'transform', 'translate(' + x + ', ' + y + ')'
   );
 };
-
 const calcMotion = (crafto, timeDelta) => {
   ['x', 'y'].forEach(e => {
       crafto.location[e] += crafto.vector[e] * timeDelta;
@@ -330,7 +517,6 @@ const calcRange = (pt1, pt2) => {
   const dy = pt1.y - pt2.y;
   return sqrt((dx * dx) + (dy * dy));
 };
-
 const updateWepLine = (crafto, enemyo, wep) => {
   let wepLine = document.getElementById(wep.mapID + '-LINE');
   wepLine.setAttribute('x1', crafto.location.x);
@@ -338,7 +524,6 @@ const updateWepLine = (crafto, enemyo, wep) => {
   wepLine.setAttribute('x2', enemyo.location.x);
   wepLine.setAttribute('y2', enemyo.location.y);
 };
-
 const wepsFire = (wep, td) => {
   let crafto = wep.host;
   let enemyo = wep.target;
@@ -376,20 +561,12 @@ const wepsFire = (wep, td) => {
   }
 
 };
-
 const hide = (id) => {
   document.getElementById(id).style.visibility = "hidden";
 };
 const unhide = (id) => {
   document.getElementById(id).style.visibility = "visible";
 };
-
-const makeManyCraft = (number, color) => {
-  for (let i = 0; i < number; i++) {
-    makeCraft(color);
-  }
-};
-
 const killCraft = (crafto) => {
     crafto.dead = true;
     crafto.team.losses += 1;
@@ -400,33 +577,48 @@ const killCraft = (crafto) => {
     crafto.team.members.splice(crafto.team.members.indexOf(crafto), 1);
     crafto.weapons.forEach(wep => {
       hide(wep.mapID);
+      hide(crafto.id + '-WEPRANGE');
     });
     crafto.renderer();
 
     console.log(crafto.id + ' destroyed');
 };
 
+const craftAI = (crafto, workTime) => {
+  calcMotion(crafto, workTime);
+};
+
 const main = () => {
   console.log('Giant alien spiders are no joke.');
 
   let renderMain = mkRndr('content');
-  renderMain(drawMap());
+  renderMain(drawMap.drawPage());
+  advRenderer.normRend('windowFrame', drawMap.drawWindowFrame());
 
-  makeManyCraft(20, 'green');
-  makeManyCraft(30, 'red');
+  makeManyCraft('arrow', 3, 'player');
+  makeManyCraft('bolt',  2,  'player');
+  makeManyCraft('spear',  1,  'player');
+
+  makeManyCraft('swarmer', 18, 'enemy');
 
   craftList.forEach(e => {
     e.renderer();
+    e.wepsRangeRenderer();
+    document.getElementById(e.id + '-SELECTOR').addEventListener('click', function () {
+      e.state = 'plotting';
+      console.log('Click Click');
+    });
   });
 
-  ['green', 'red'].forEach(e => {
+  ['player', 'enemy'].forEach(e => {
     let point = spawnPoints[e];
-    point.renderer = function () { advRenderer.normRend('sp-' + e, drawSpawn(point.x, point.y, point.r, e)); };
+    point.renderer = function () { advRenderer.normRend('sp-' + e, drawMap.drawSpawn(point.x, point.y, point.r, e)); };
     point.renderer();
   });
 
   mapPan.x = getPageWidth()/2;
   mapPan.y = getPageHeight()/2;
+
   changeElementTT('map', mapPan.x, mapPan.y);
 
   let simpRate = 1 / 1000;
@@ -442,10 +634,13 @@ const main = () => {
     // currentTime += workTime;
 
     craftList.forEach(crafto => {
-      calcMotion(crafto, workTime);
+      craftAI(crafto, workTime);
+
       changeElementTT(crafto.mapID, crafto.location.x, crafto.location.y);
+      changeElementTT(crafto.mapID + '-WEPS-RANGE', crafto.location.x, crafto.location.y);
+
       return crafto.weapons.find(wep => {
-        if (wep.status === 'ready') {
+        if (wep.status === 'ready' && crafto.team.enemy.members.length > 0) {
           return crafto.team.enemy.members.find(enemyo => {
             let range = calcRange(crafto.location, enemyo.location);
             if (
@@ -460,11 +655,14 @@ const main = () => {
           wepsFire(wep, timeDelta);
         }
       });
+
     });
 
-    // craftList.forEach(crafto => {
-    //   if (crafto.health <= 0) {killCraft(crafto);}
-    // });
+
+    deadCraftList.forEach(crafto => {
+      calcMotion(crafto, workTime);
+      changeElementTT(crafto.mapID, crafto.location.x, crafto.location.y);
+    });
 
     setTimeout(loop, 1000/options.targetFrames);
   };
@@ -473,7 +671,7 @@ const main = () => {
 
 window.onload = main;
 
-},{"./advRenderer.js":1,"./get-svg.js":2,"./icons.js":3,"onml/renderer.js":5,"onml/tt.js":7}],5:[function(require,module,exports){
+},{"./advRenderer.js":1,"./drawMap.js":2,"./hullTemp.js":4,"onml/renderer.js":7}],7:[function(require,module,exports){
 'use strict';
 
 const stringify = require('./stringify.js');
@@ -498,7 +696,7 @@ module.exports = renderer;
 
 /* eslint-env browser */
 
-},{"./stringify.js":6}],6:[function(require,module,exports){
+},{"./stringify.js":8}],8:[function(require,module,exports){
 'use strict';
 
 const isObject = o => o && Object.prototype.toString.call(o) === '[object Object]';
@@ -591,7 +789,7 @@ function stringify (a, indentation) {
 
 module.exports = stringify;
 
-},{}],7:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 'use strict';
 
 module.exports = (x, y, obj) => {
@@ -604,4 +802,4 @@ module.exports = (x, y, obj) => {
   return Object.assign(objt, obj);
 };
 
-},{}]},{},[4]);
+},{}]},{},[6]);

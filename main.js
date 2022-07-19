@@ -1,10 +1,10 @@
 'use strict';
 const renderer = require('onml/renderer.js');
-const icons = require('./icons.js');
-const advRenderer = require('./advRenderer.js');
-const tt = require('onml/tt.js');
 
-const getSvg = require('./get-svg.js');
+const advRenderer = require('./advRenderer.js');
+
+const hullTemps = require('./hullTemp.js');
+const drawMap = require('./drawMap.js');
 
 function getPageWidth() {return document.body.clientWidth;}
 function getPageHeight() {return document.body.clientHeight;}
@@ -13,34 +13,20 @@ const mkRndr = (place) => {
   return renderer(document.getElementById(place));
 };
 
-const drawMap = () => {
-  return getSvg({w:getPageWidth() - 10, h:getPageHeight() - 10 , i:'allTheStuff'}).concat([
-    ['defs'],
-    ['g', {id: 'map'},
-      ['g', {id: 'spawnPoints'},
-        ['g', {id: 'sp-green'}],
-        ['g', {id: 'sp-red'}]
-      ],
-      ['g', {id: 'weps'}],
-      ['g', {id: 'crafts'}]
-    ],
-
-  ]);
-};
-
 let craftList = [];
 let deadCraftList = [];
 
-const iDGenGen = () => {
+const iDerGenGen  = (prefix) => {
   let id = 0;
   return () => {
     id += 1;
-    return id;
+    return prefix + '-' + id;
   };
 };
-
-const iDGen = iDGenGen();
-const iDWepGen = iDGenGen();
+const craftNamer  = iDerGenGen('HULL');
+const craftIDer   = iDerGenGen('C');
+//const iDGen     = iDerGenGen();
+const iDWepGen    = iDerGenGen('W');
 
 function rand(mean, deviation, prec = 0, upper = Infinity, lower = -Infinity) {
   let max = mean + deviation > upper ? upper : mean + deviation;
@@ -66,69 +52,110 @@ const genPoint = (spawnPoint, point = {x: 0, y: 0}) => {
 
   return point;
 };
-
-const makeCraft = (teamColor = 'green') => {
-  let id = iDGen();
-  let mapID = 'C-' + id;
+const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
+  //(crafto, name, id, owner = 'EMPIRE')
+  const initWait = 10;
   advRenderer.appendRend('crafts', (['g', {id: mapID}]));
+  advRenderer.appendRend('wepsRanges', (['g', {id: mapID + '-WEPS-RANGE'}]));
 
-  let crafto = {
-    id: teamColor[0] + id,
-    mapID: mapID,
-    renderer: undefined,
-    location: {x: 0, y: 0},
-    vector: {x: 0, y: 0},
-    team: teams[teamColor],
-    weaponsList: ['lance'],
-    weapons: [],
-    ranges: [],
-    health: 5,
-    status: 'normal',
-    dead: false
+  let newCrafto = Object.assign(
+    crafto,
+    {
+      id: owner[0] + id,
+      mapID: mapID,
+
+      renderer: undefined,
+      wepsRangeRenderer: undefined,
+
+      location: {x: 0, y: 0, z: 0},
+      vector: {x: 0, y: 0, z: 0},
+      team: teams[owner],
+
+      weapons: [],
+      ranges: [],
+
+      status: 'normal',
+      dead: false,
+
+      name: name,
+      speed: 0,
+      course: 0,
+      accelStat: 0,
+      intercept: {},
+      route: [],
+      lastStop: [],
+      cargo: {},
+      fuel: crafto.fuelCapacity,
+      owner: owner,
+      waitCycle: 0 + initWait,
+      render: false,
+      visible: true,
+
+      state: 'stopped'
+    }
+  );
+
+  newCrafto.renderer = function () {
+    advRenderer.normRend(mapID, drawMap.drawCraft(newCrafto));
+  };
+  newCrafto.wepsRangeRenderer = function () {
+    advRenderer.normRend(mapID + '-WEPS-RANGE', drawMap.drawWepRanges(newCrafto));
   };
 
-  crafto.renderer = function () {
-    advRenderer.normRend(mapID, drawCraft(crafto));
-  };
+  makeWeps(newCrafto);
 
-  makeWeps(crafto);
-
-  const spawnPoint = crafto.team.spawnPoint;
+  const spawnPoint = newCrafto.team.spawnPoint;
 
 
   let point = genPoint(spawnPoint);
 
-  crafto.location.x = point.x + spawnPoint.x;
-  crafto.location.y = point.y + spawnPoint.y;
+  newCrafto.location.x = point.x + spawnPoint.x;
+  newCrafto.location.y = point.y + spawnPoint.y;
 
-  crafto.vector.x = spawnPoint.vx;
-  crafto.vector.y = spawnPoint.vy;
+  newCrafto.vector.x = spawnPoint.vx;
+  newCrafto.vector.y = spawnPoint.vy;
 
+  calcCourse(newCrafto, newCrafto.vector);
 
-  craftList.push(crafto);
-  teams[teamColor].members.push(crafto);
+  craftList.push(newCrafto);
+  teams[owner].members.push(newCrafto);
 
   console.log(crafto);
 
-  return crafto;
+  return newCrafto;
+};
+const calcCourse = (crafto, targeto) => {
+  crafto.course = (Math.atan2(targeto.y, targeto.x) * 180 / Math.PI) - 90;
+};
+const makeManyCraft = (craftType, numberToMake, owner = undefined) => {
+  for (let i = 0; i < numberToMake; i++) {
+    const baseTemplate = hullTemps[craftType]();
+    const name = craftNamer();
+    const id = craftIDer();
+    const mapID = id + '-MID';
+
+    makeCraft(baseTemplate, name, id, mapID, owner);
+
+    console.log('Made ' + name + ' (' + id + ')');
+  }
 };
 
 const spawnPoints = {
-  'green': {x: 250, y: 250, r: 100, vx: -10, vy:-10, renderer: undefined},
-  'red': {x: -250, y:-250, r: 200, vx: 10, vy: 10, renderer: undefined}
+  'player':  {x: 150,  y: 150, r: 50,  vx: -10, vy:-10, renderer: undefined},
+  'enemy':    {x: -150, y:-150, r: 100,  vx: 10,  vy: 10, renderer: undefined}
 };
 
 const teams = {
-  green: {color: 'green', spawnPoint: spawnPoints.green,  members: [], enemy: undefined, kills: 0, losses: 0},
-  red:   {color: 'red',   spawnPoint: spawnPoints.red,    members: [], enemy: undefined, kills: 0, losses: 0}
+  player: {color: 'player', spawnPoint: spawnPoints.player,  members: [], enemy: undefined, kills: 0, losses: 0},
+  enemy:   {color: 'enemy',   spawnPoint: spawnPoints.enemy,    members: [], enemy: undefined, kills: 0, losses: 0}
 };
-teams.green.enemy = teams.red;
-teams.red.enemy =   teams.green;
+teams.player.enemy = teams.enemy;
+teams.enemy.enemy =   teams.player;
 
 const makeWeps = (crafto) => {
   crafto.weaponsList.forEach(e => {
     let id = iDWepGen();
-    let mapID = 'W-' + id;
+    let mapID = id;
     let wepo = {
       id: id,
       mapID: mapID,
@@ -144,7 +171,7 @@ const makeWeps = (crafto) => {
     crafto.ranges.push(weps[e].range) ;
     advRenderer.appendRend('weps', (['g', {id: mapID}]));
     wepo.renderer = function () {
-      advRenderer.normRend(mapID, drawWep(wepo));
+      advRenderer.normRend(mapID, drawMap.drawWep(wepo));
     };
     wepo.renderer();
     hide(wepo.mapID);
@@ -152,66 +179,10 @@ const makeWeps = (crafto) => {
   });
 };
 
-const drawWep = (wepo) => {
-  let drawnWep = ['g', {}];
-
-  drawnWep.push(
-    ['line', {
-      id: wepo.mapID + '-LINE',
-      x1: 0,
-      y1: 0,
-      x2: 100,
-      y2: 100,
-      class: 'wepFire1'
-    }]
-  );
-
-  return drawnWep;
-};
-
 const weps = {
-  lance: {damage: 1, reloadTime: 5000, range: 100, pulseTime: 2000}
-};
-
-const drawCraft = (crafto) => {
-  let drawnCraft = ['g', {id: crafto.id}];
-
-  if (crafto.dead) {
-
-    drawnCraft.push(icons.hull(crafto));
-
-  } else {
-
-    crafto.ranges.forEach(range => {
-      drawnCraft.push(['circle', {r: range, class: 'wepsRangeCircle ' + crafto.team.color + ' ' + crafto.team.color +'Fill'}]);
-    });
-
-    drawnCraft.push(icons.hull(crafto));
-    drawnCraft.push(['text', {
-      x: 5,
-      y: 5,
-      class: 'craftIconText ' + crafto.team.color +'Fill'
-    },
-      crafto.id
-    ]);
-
-  }
-
-  return drawnCraft;
-
-};
-
-const drawSpawn = (x, y, r, color) => {
-  let drawnPoint = ['g', tt(x, y)];
-
-  drawnPoint.push(
-    ['circle', {
-      r: r,
-      class:  'spawnPoint ' + color
-    }]
-  );
-
-  return drawnPoint;
+  MiniLance:  {damage: 1, range: 50,  reloadTime: 100,  pulseTime: 100,  color: "wepFire0"},
+  Lance:      {damage: 2, range: 100, reloadTime: 1000, pulseTime: 1000, color: "wepFire1"},
+  SuperLance: {damage: 3, range: 300, reloadTime: 5000, pulseTime: 1000, color: "wepFire2"}
 };
 
 const changeElementTT = (id, x, y) => {
@@ -219,7 +190,6 @@ const changeElementTT = (id, x, y) => {
     'transform', 'translate(' + x + ', ' + y + ')'
   );
 };
-
 const calcMotion = (crafto, timeDelta) => {
   ['x', 'y'].forEach(e => {
       crafto.location[e] += crafto.vector[e] * timeDelta;
@@ -255,7 +225,6 @@ const calcRange = (pt1, pt2) => {
   const dy = pt1.y - pt2.y;
   return sqrt((dx * dx) + (dy * dy));
 };
-
 const updateWepLine = (crafto, enemyo, wep) => {
   let wepLine = document.getElementById(wep.mapID + '-LINE');
   wepLine.setAttribute('x1', crafto.location.x);
@@ -263,7 +232,6 @@ const updateWepLine = (crafto, enemyo, wep) => {
   wepLine.setAttribute('x2', enemyo.location.x);
   wepLine.setAttribute('y2', enemyo.location.y);
 };
-
 const wepsFire = (wep, td) => {
   let crafto = wep.host;
   let enemyo = wep.target;
@@ -301,20 +269,12 @@ const wepsFire = (wep, td) => {
   }
 
 };
-
 const hide = (id) => {
   document.getElementById(id).style.visibility = "hidden";
 };
 const unhide = (id) => {
   document.getElementById(id).style.visibility = "visible";
 };
-
-const makeManyCraft = (number, color) => {
-  for (let i = 0; i < number; i++) {
-    makeCraft(color);
-  }
-};
-
 const killCraft = (crafto) => {
     crafto.dead = true;
     crafto.team.losses += 1;
@@ -325,33 +285,48 @@ const killCraft = (crafto) => {
     crafto.team.members.splice(crafto.team.members.indexOf(crafto), 1);
     crafto.weapons.forEach(wep => {
       hide(wep.mapID);
+      hide(crafto.id + '-WEPRANGE');
     });
     crafto.renderer();
 
     console.log(crafto.id + ' destroyed');
 };
 
+const craftAI = (crafto, workTime) => {
+  calcMotion(crafto, workTime);
+};
+
 const main = () => {
   console.log('Giant alien spiders are no joke.');
 
   let renderMain = mkRndr('content');
-  renderMain(drawMap());
+  renderMain(drawMap.drawPage());
+  advRenderer.normRend('windowFrame', drawMap.drawWindowFrame());
 
-  makeManyCraft(20, 'green');
-  makeManyCraft(30, 'red');
+  makeManyCraft('arrow', 3, 'player');
+  makeManyCraft('bolt',  2,  'player');
+  makeManyCraft('spear',  1,  'player');
+
+  makeManyCraft('swarmer', 18, 'enemy');
 
   craftList.forEach(e => {
     e.renderer();
+    e.wepsRangeRenderer();
+    document.getElementById(e.id + '-SELECTOR').addEventListener('click', function () {
+      e.state = 'plotting';
+      console.log('Click Click');
+    });
   });
 
-  ['green', 'red'].forEach(e => {
+  ['player', 'enemy'].forEach(e => {
     let point = spawnPoints[e];
-    point.renderer = function () { advRenderer.normRend('sp-' + e, drawSpawn(point.x, point.y, point.r, e)); };
+    point.renderer = function () { advRenderer.normRend('sp-' + e, drawMap.drawSpawn(point.x, point.y, point.r, e)); };
     point.renderer();
   });
 
   mapPan.x = getPageWidth()/2;
   mapPan.y = getPageHeight()/2;
+
   changeElementTT('map', mapPan.x, mapPan.y);
 
   let simpRate = 1 / 1000;
@@ -367,10 +342,13 @@ const main = () => {
     // currentTime += workTime;
 
     craftList.forEach(crafto => {
-      calcMotion(crafto, workTime);
+      craftAI(crafto, workTime);
+
       changeElementTT(crafto.mapID, crafto.location.x, crafto.location.y);
+      changeElementTT(crafto.mapID + '-WEPS-RANGE', crafto.location.x, crafto.location.y);
+
       return crafto.weapons.find(wep => {
-        if (wep.status === 'ready') {
+        if (wep.status === 'ready' && crafto.team.enemy.members.length > 0) {
           return crafto.team.enemy.members.find(enemyo => {
             let range = calcRange(crafto.location, enemyo.location);
             if (
@@ -385,11 +363,14 @@ const main = () => {
           wepsFire(wep, timeDelta);
         }
       });
+
     });
 
-    // craftList.forEach(crafto => {
-    //   if (crafto.health <= 0) {killCraft(crafto);}
-    // });
+
+    deadCraftList.forEach(crafto => {
+      calcMotion(crafto, workTime);
+      changeElementTT(crafto.mapID, crafto.location.x, crafto.location.y);
+    });
 
     setTimeout(loop, 1000/options.targetFrames);
   };
