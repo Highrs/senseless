@@ -49,6 +49,20 @@ module.exports = {
       ['path', {d: 'M  '+corner+', -'+sides+' L  '+corner+', -'+corner+' L  '+sides+', -'+corner}],
       ['path', {d: 'M -'+corner+',  '+sides+' L -'+corner+',  '+corner+' L -'+sides+',  '+corner}]
     ];
+  },
+  gridCross:    (crossSize, x, y) => {
+    return ['g', {},
+      ['line', {
+        x1: x - crossSize, y1: y,
+        x2: x + crossSize, y2: y,
+        class: 'grid'
+      }],
+      ['line', {
+        x1: x, y1: y + crossSize,
+        x2: x, y2: y - crossSize,
+        class: 'grid'
+      }]
+    ];
   }
 
 };

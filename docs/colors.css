@@ -85,6 +85,11 @@ playerhtml, body {
   stroke-width: 1px;
   stroke: #ffffffff;
 }
+.standardBox{
+  fill: #363636;
+  stroke-width: 1px;
+  stroke: #ffffffff;
+}
 .standardBoxSelectable {
   fill: #363636;
   stroke-width: 1px;
@@ -94,8 +99,40 @@ playerhtml, body {
   stroke: #ffb500;
   stroke-width: 2px;
 }
+.scaleEmpty {
+  fill: #363636;
+  stroke-width: 1px;
+  stroke: #ffffffff;
+}
+.scaleFull {
+  fill: #ffffffff;
+  stroke-width: 1px;
+  stroke: #ffffffff;
+}
+.craftDataText {
+  font: 1rem B612 Mono;
+  stroke: none;
+  fill: #ffffffff;
+  user-select: none;
+}
 .UIcon {
   fill: #363636;
   stroke-width: 3px;
   stroke: #ffffffff;
+}
+.grid {
+  stroke-width: 0.5px;
+  stroke: #a3a3a3ff;
+  fill: none;
+}
+.gridBold {
+  stroke-width: 1px;
+  stroke: #a3a3a3ff;
+  fill: none;
+}
+.vector {
+  fill: none;
+  stroke-width: 1px;
+  stroke: #ffffffff;
+  fill: none;
 }
