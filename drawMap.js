@@ -1,6 +1,7 @@
 const getSvg = require('./get-svg.js');
 const tt = require('onml/tt.js');
 const icons = require('./icons.js');
+const lists = require('./lists.js');
 
 function getPageWidth() {return Math.max(document.body.clientWidth, window.innerWidth);}
 function getPageHeight() {return Math.max(document.body.clientHeight, window.innerHeight);}
@@ -46,7 +47,8 @@ exports.drawCraft = (crafto) => {
   }
 
   drawnCraft.push(
-    icons.brackets(crafto.id, 2)
+    icons.bracketSelected(crafto.id + '-SELECTED', 2),
+    icons.brackets(crafto.id + '-SELECTOR', 4)
   );
 
   return drawnCraft;
@@ -67,6 +69,14 @@ exports.updateCraft = (crafto) => {
     'transform', 'translate('+crafto.vec.x+', '+crafto.vec.y+')'
   );
 
+};
+exports.updateSelector = (crafto) => {
+  if (crafto.selected) {
+    document.getElementById(crafto.id + '-SELECTED').style.visibility = "visible";
+  } else {
+    document.getElementById(crafto.id + '-SELECTED').style.visibility = "hidden";
+  }
+  crafto.selectedChange = false;
 };
 exports.drawWepRanges = (crafto, mapPan) => {
 
@@ -148,16 +158,16 @@ exports.drawScreenFrame = () => {
       class: 'frame' }]
     ];
 
-    // frame.push( ['g', tt(4,4),
-    //   ['g', tt(0, 0, {id:'buttonSettings', class: 'standardBoxSelectable'}),
-    //     ['rect', {width: 30, height: 30}],
-    //     ['g', tt(15,15),
-    //       ['path', {d:'M 12 -9 -12 -9', class:'UIcon'}],
-    //       ['path', {d:'M 12 0 -12 0', class:'UIcon'}],
-    //       ['path', {d:'M 12 9 -12 9', class:'UIcon'}],
-    //     ]
-    //   ]
-    // ]);
+    frame.push( ['g', tt(4,4),
+      ['g', tt(0, 0, {id:'buttonSettings', class: 'standardBoxSelectable'}),
+        ['rect', {width: 30, height: 30}],
+        ['g', tt(15,15),
+          ['path', {d:'M 12 -9 -12 -9', class:'UIcon'}],
+          ['path', {d:'M 12 0 -12 0', class:'UIcon'}],
+          ['path', {d:'M 12 9 -12 9', class:'UIcon'}],
+        ]
+      ]
+    ]);
     // frame.push( ['g', tt(4,38),
     //   ['g', tt(0, 0, {id:'button', class: 'standardBoxSelectable'}),
     //     ['rect', {width: 30, height: 30}],
@@ -165,6 +175,72 @@ exports.drawScreenFrame = () => {
     // ]);
 
   return frame;
+};
+const drawSimRateModule = (x, y) => {
+  let btSz = 30;
+  let mrgn = 3;
+  return ['g', {id: 'simRateModule'},
+    // ['rect', {width: 10, height: 2, class: 'standardBox'}],
+    ['g', tt(x,y),
+      ['rect', {width: btSz*6+mrgn*4+8, height: btSz+24, class: 'standardBox'}],
+      ['text', {class: 'dataText', x: 4, y:15}, 'Simulation rate:']
+    ],
+    ['g', tt(x+4,y+20),
+      ['g', tt(0, 0, {id:'buttonStop', class: 'standardBoxSelectable'}),
+        ['rect', {width: btSz, height: btSz}],
+        ['path', { d: 'M 11, 4 L 11, 26', class: 'UIcon'}],
+        ['path', { d: 'M 19, 4 L 19, 26', class: 'UIcon'}],
+        // icons.arrow(2, true),
+      ],
+      ['g', tt(btSz+mrgn,0, {id:'buttonSlow', class: 'standardBoxSelectable'}),
+        ['rect', {width: btSz, height: btSz}],
+        icons.arrow(0, true)
+      ],
+      ['g', tt((btSz+mrgn)*2,0, {id:'simRateDisplay', class: 'standardBox'}),
+        ['rect', {width: btSz*2, height: btSz}],
+        ['g', {id: 'rateCounter'}]
+      ],
+      ['g', tt((btSz*4)+(mrgn*3),0, {id:'buttonFast', class: 'standardBoxSelectable'}),
+        ['rect', {width: btSz, height: btSz}],
+        icons.arrow(0, false)
+      ],
+      ['g', tt((btSz*5)+(mrgn*4),0, {id:'buttonMax', class: 'standardBoxSelectable'}),
+        ['rect', {width: btSz, height: btSz}],
+        icons.arrow(4, false),
+        icons.arrow(-4, false),
+      ]
+    ]
+  ];
+};
+exports.drawSimRateModule = drawSimRateModule;
+exports.drawRateCounter = (options) => {
+  return ['text', {x: 4, y: 19,class: 'dataText bold'}, 'X ' + options.rate];
+  //options.rate.toString().length
+};
+exports.drawBoxSettings = () => {
+  let box = ['g', {}];
+
+  let keys = ['g', tt(4, 24)];
+  let keysHeight = lists.keys().length * 15 + 4;
+  keys.push(['rect', {width: 30*6+3*4+8, height: keysHeight, class: 'standardBox'}]);
+
+  box.push(['rect', {height: keysHeight + 90, width: 238, class:'standardBox'}]);
+  box.push(['rect', {height: 20, width: 208, class:'standardBoxSelectable', id:'boxSettingsDragger'}]);
+  box.push(['g', tt(208, 0, {id: 'boxSettingsCloser', class:'standardBoxSelectable'}),
+    ['rect', {height: 30, width: 30}],
+    ['path', {d: 'M 4, 4 L 26, 26', class: 'UIcon'}],
+    ['path', {d: 'M 4, 26 L 26, 4', class: 'UIcon'}]
+  ]);
+
+
+  for (let i = 0; i < lists.keys().length; i++) {
+    keys.push(['g', tt(2,  15 * i + 14), [ 'text', {class: 'dataText'}, lists.keys()[i] ]],);
+  }
+  box.push(keys);
+
+  box.push(drawSimRateModule(4, 24 + keysHeight + 4));
+
+  return box;
 };
 
 const drawGrid = (mapPan, options, reReRenderScaleBar) => {
@@ -241,7 +317,6 @@ exports.drawPage = () => {
     ['defs'],
 
     ['g', {id: 'gridScaleBar'}],
-    ['g', {id: 'screenFrame'}],
     ['g', {id: 'map'},
       ['g', {id: 'grid'}],
       ['g', {id: 'wepsRanges'}],
@@ -251,6 +326,10 @@ exports.drawPage = () => {
       ],
       ['g', {id: 'weps'}],
       ['g', {id: 'crafts'}]
+    ],
+    ['g', {id: 'screenFrame'}],
+    ['g', {id: 'boxes'},
+      ['g', {id: 'boxMainSettings'}]
     ]
   ]);
 };

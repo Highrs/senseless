@@ -72,6 +72,11 @@ playerhtml, body {
   fill: none;
   stroke: none;
 }
+.standardBracket {
+  fill: none;
+  stroke: #ffb500;
+  stroke-width: 2px;
+}
 .standardSelector:hover {
   stroke: #ffb500;
   stroke-width: 2px;
@@ -135,4 +140,10 @@ playerhtml, body {
   stroke-width: 1px;
   stroke: #ffffffff;
   fill: none;
+}
+.dataText {
+  font: 0.8rem B612 Mono;
+  stroke: none;
+  fill: #ffffffff;
+  user-select: none;
 }

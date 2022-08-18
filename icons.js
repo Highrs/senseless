@@ -33,10 +33,10 @@ module.exports = {
 
     return drawnHull;
   },
-  brackets:     (iD, margin = 0, offsetY = 0) => {
+  brackets: (iD, margin = 0, offsetY = 0) => {
     let corner = 10 + margin;
     let sides = corner - 5;
-    return ['g', tt(0, offsetY, {class: 'standardSelector', id:iD + '-SELECTOR'}),
+    return ['g', tt(0, offsetY, {class: 'standardSelector', id:iD}),
       ['rect', {
         x:-corner,
         y:-corner,
@@ -50,7 +50,17 @@ module.exports = {
       ['path', {d: 'M -'+corner+',  '+sides+' L -'+corner+',  '+corner+' L -'+sides+',  '+corner}]
     ];
   },
-  gridCross:    (crossSize, x, y) => {
+  bracketSelected: (iD, margin = 0, offsetY = 0) => {
+    let corner = 10 + margin;
+    let sides = corner - 5;
+    return ['g', tt(0, offsetY, {class: 'standardBracket', id:iD, visibility:'hidden'}),
+      ['path', {d: 'M  '+corner+',  '+sides+' L   '+sides+',  '+corner}],
+      ['path', {d: 'M -'+corner+', -'+sides+' L  -'+sides+', -'+corner}],
+      ['path', {d: 'M  '+corner+', -'+sides+' L   '+sides+', -'+corner}],
+      ['path', {d: 'M -'+corner+',  '+sides+' L  -'+sides+',  '+corner}]
+    ];
+  },
+  gridCross: (crossSize, x, y) => {
     return ['g', {},
       ['line', {
         x1: x - crossSize, y1: y,
@@ -63,6 +73,8 @@ module.exports = {
         class: 'grid'
       }]
     ];
-  }
-
+  },
+  arrow: (hOffset = 0, mirror = false) => {
+    return ['path', tt(15 + hOffset, 15, {d: ('M '+(mirror?'+':'-')+'5, 10 L '+(mirror?'-':'+')+'5, 0 L '+(mirror?'+':'-')+'5, -10'), class: 'UIcon'})];
+  },
 };

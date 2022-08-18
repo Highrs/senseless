@@ -22,12 +22,17 @@ const craftIDer   = iDerGenGen('C');
 const iDWepGen    = iDerGenGen('W');
 
 Window.options = {
-  rate: 1,
+  rate: 0.2,
   targetFrames: 60,
+
+  rateSetting: 3,
+  simRates: [0, 0.1, 0.5, 1, 2, 3, 4],
 
   grid: true,
   gridStep: 10,
   gridCrossSize: 5,
+
+  keyPanStep: 50,
 };
 const options = Window.options;
 
@@ -46,7 +51,11 @@ let mapPan = {
   interceptUpdated: true,
   boxes: {
     boxSettings: false,
-  }
+  },
+  unitSelected: false,
+  selectedUnit: undefined,
+  selectedChange: false,
+  preppingWaypoint: false,
 };
 const spawnPoints = {
   'player':  {
@@ -67,22 +76,23 @@ const teams = {
   enemy:   {color: 'enemy',   spawnPoint: spawnPoints.enemy,    members: [], enemy: undefined, kills: 0, losses: 0}
 };
 teams.player.enemy = teams.enemy;
-teams.enemy.enemy =   teams.player;
+teams.enemy.enemy = teams.player;
 const weps = {
-  MiniLance:  {damage: 1, range: 50,  reloadTime: 100,  pulseTime: 100,  color: "wepFire0"},
-  Lance:      {damage: 2, range: 100, reloadTime: 1000, pulseTime: 1000, color: "wepFire1"},
-  SuperLance: {damage: 3, range: 300, reloadTime: 5000, pulseTime: 1000, color: "wepFire2"}
+  MiniLance:  {damage: 1, range: 50,  reloadTime: 0.100,  pulseTime: 0.100,  color: "wepFire0"},
+  Lance:      {damage: 2, range: 100, reloadTime: 1.000, pulseTime: 1.000, color: "wepFire1"},
+  SuperLance: {damage: 3, range: 300, reloadTime: 5.000, pulseTime: 1.000, color: "wepFire2"}
 };
 let craftList = [];
 let deadCraftList = [];
+let activeWepsList = [];
 function rand(mean, deviation, prec = 0, upper = Infinity, lower = -Infinity) {
   let max = mean + deviation > upper ? upper : mean + deviation;
   let min = mean - deviation < lower ? lower : mean - deviation;
 
   return (
     ( Math.round(
-      (Math.random() * (max - min) + min) * Math.pow(10, prec)
-      ) / Math.pow(10, prec)
+      (Math.random() * (max - min) + min) * (0 ** prec)
+    ) / (10 ** prec)
     )
   );
 }
@@ -117,9 +127,13 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
       renderer: undefined,
       wepsRangeRenderer: undefined,
 
+      selected: false,
+      updateSelector: undefined,
+
       loc: {x: 0, y: 0, z: 0},
       vec: {x: 0, y: 0, z: 0},
       team: teams[owner],
+      waypoints: [],
 
       weapons: [],
       ranges: [],
@@ -140,9 +154,9 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
       waitCycle: 0 + initWait,
       render: false,
       visible: true,
-      updateHeading: true
+      updateHeading: true,
 
-      //state: 'stopped'
+      state: 'normal'
     }
   );
 
@@ -151,6 +165,9 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
   };
   newCrafto.wepsRangeRenderer = function () {
     advRenderer.normRend(mapID + '-WEPS-RANGE', drawMap.drawWepRanges(newCrafto, mapPan));
+  };
+  newCrafto.updateSelector = function () {
+    drawMap.updateSelector(newCrafto);
   };
 
   makeWeps(newCrafto);
@@ -192,6 +209,13 @@ const makeManyCraft = (craftType, numberToMake, owner = undefined) => {
     console.log('Made ' + name + ' (' + id + ')');
   }
 };
+const wepsRangeInCraftoRanges = (crafto, wepo) => {
+  return crafto.ranges.find(range => {
+    if (range === wepo.range) {
+      return true;
+    }
+  });
+};
 const makeWeps = (crafto) => {
   crafto.weaponsList.forEach(e => {
     let id = iDWepGen();
@@ -208,7 +232,11 @@ const makeWeps = (crafto) => {
       host: crafto,
       target: {},
     };
-    crafto.ranges.push(weps[e].range) ;
+
+    if (!wepsRangeInCraftoRanges(crafto, wepo)) {
+      crafto.ranges.push(wepo.range);
+    }
+
     advRenderer.appendRend('weps', (['g', {id: mapID}]));
     wepo.renderer = function () {
       advRenderer.normRend(mapID, drawMap.drawWep(wepo));
@@ -223,29 +251,19 @@ const changeElementTT = (id, x, y) => {
     'transform', 'translate(' + x + ', ' + y + ')'
   );
 };
-const calcMotion = (crafto, timeDelta) => {
+const calcMotion = (crafto, workTime) => {
   ['x', 'y'].forEach(e => {
-      crafto.loc[e] += crafto.vec[e] * timeDelta;
+      crafto.loc[e] += crafto.vec[e] * workTime;
     });
 };
-// const boundsCheck = (x, y, margin = 10) => {
-//   if (
-//     x + margin > 0 &&
-//     x - margin < getPageWidth() &&
-//     y + margin > 0 &&
-//     y - margin < getPageHeight()
-//   ) {
-//     return true;
-//   } else {
-//     return false;
-//   }
-// };
 const calcRange = (pt1, pt2) => {
   const dx = pt1.x - pt2.x;
   const dy = pt1.y - pt2.y;
   return sqrt((dx * dx) + (dy * dy));
 };
-const updateWepLine = (crafto, enemyo, wep) => {
+const updateWepLine = (wep) => {
+  let enemyo = wep.target;
+  let crafto = wep.host;
   let wepLine = document.getElementById(wep.mapID + '-LINE');
   wepLine.setAttribute('x1', crafto.loc.x * mapPan.zoom);
   wepLine.setAttribute('y1', crafto.loc.y * mapPan.zoom);
@@ -258,7 +276,6 @@ const wepsFire = (wep, td) => {
 
   switch (wep.status) {
     case 'ready':
-      updateWepLine(crafto, enemyo, wep);
       unhide(wep.mapID);
 
       enemyo.health -= wep.damage;
@@ -272,12 +289,12 @@ const wepsFire = (wep, td) => {
     case 'firing':
       wep.pulseProg += td;
       if (wep.pulseProg >= wep.pulseTime) {
+        activeWepsList.splice(activeWepsList.indexOf(wep), 1);
         wep.status = 'reloading';
         wep.pulseProg = 0;
         wep.target = {};
         hide(wep.mapID);
       }
-      updateWepLine(crafto, enemyo, wep);
       break;
     case 'reloading':
       wep.reloadProg += td;
@@ -350,17 +367,26 @@ const main = () => {
   let renderMain = mkRndr('content');
   renderMain(drawMap.drawPage());
 
+  let renderRateCounter     = undefined;
+  const initRateRenderer = () => {
+    renderRateCounter     = mkRndr('rateCounter');
+  };
+
   let renderGrid            = mkRndr('grid');
   let renderGridScaleBar    = mkRndr('gridScaleBar');
   let renderScreenFrame     = mkRndr('screenFrame');
 
   advRenderer.normRend('screenFrame', drawMap.drawScreenFrame());
 
+  let renderBoxSettings     = mkRndr('boxMainSettings');
+
   makeManyCraft('arrow', 3, 'player');
   makeManyCraft('bolt', 2, 'player');
   makeManyCraft('spear', 1, 'player');
 
-  makeManyCraft('swarmer', 18, 'enemy');
+  makeManyCraft('swarmer', 15, 'enemy');
+
+  //CHANGE 'IS PAUSED' TO SEPARATE AI AND ZOOM/PAN!!!
 
   function reReRenderScaleBar(options, mapPan) {
     renderGridScaleBar(drawMap.drawGridScaleBar(options, mapPan));
@@ -369,13 +395,10 @@ const main = () => {
     renderGrid(drawMap.drawGrid(mapPan, options, reReRenderScaleBar));
   };
 
-  craftList.forEach(e => {
-    e.renderer();
-    e.wepsRangeRenderer();
-    document.getElementById(e.id + '-SELECTOR').addEventListener('click', function () {
-      e.state = 'plotting';
-      console.log('Click Click');
-    });
+  craftList.forEach(crafto => {
+    crafto.renderer();
+    crafto.wepsRangeRenderer();
+    ui.addCraftListeners(crafto, mapPan);
   });
 
   ['player', 'enemy'].forEach(e => {
@@ -386,7 +409,6 @@ const main = () => {
     point.updater = function () {
       drawMap.updateSpawn(point, mapPan);
     };
-
 
     point.renderer();
     point.updater();
@@ -410,6 +432,10 @@ const main = () => {
   stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
   document.body.appendChild( stats.dom );
 
+  const updateRateCounter = (options) => {
+    renderRateCounter(drawMap.drawRateCounter(options));
+  };
+
   const resizeWindow = () => {
     document.getElementById('allTheStuff').setAttribute('width', getPageWidth());
     document.getElementById('allTheStuff').setAttribute('height', getPageHeight());
@@ -418,21 +444,35 @@ const main = () => {
     );
     reRendScreenFrame();
   };
-  const reRendScreenFrame = () => {
-    renderScreenFrame(drawMap.drawScreenFrame());
-    //ui.addFrameListeners(mapPan, renderers);
-  };
 
+  const placecheckBoxSettings = () => {
+    if (mapPan.boxes.boxSettings) {
+      renderBoxSettings(drawMap.drawBoxSettings());
+      ui.addBoxSettingsListeners(mapPan, renderBoxSettings);
+      ui.addRateListeners(options, updateRateCounter);
+      initRateRenderer();
+      updateRateCounter(options);
+    }
+    else {
+      renderBoxSettings([]);
+    }
+  };
 
   let renderers = {
     resizeWindow: resizeWindow,
+    boxSettings: placecheckBoxSettings
   };
+
+  const reRendScreenFrame = () => {
+    renderScreenFrame(drawMap.drawScreenFrame());
+    ui.addFrameListeners(mapPan, renderers);
+  };
+
+  reRendScreenFrame(mapPan, renderers);
 
   ui.addListeners(options, mapPan, renderers);
 
   const loop = () => {
-
-    stats.begin(); //Stats FPS tracking
 
     let time = performance.now();
     let timeDelta = time - clockZero;
@@ -440,26 +480,12 @@ const main = () => {
     let workTime = (timeDelta * options.rate * simpRate);
     // currentTime += workTime;
 
+    stats.begin(); //Stats FPS tracking
+
     if (!options.isPaused) {
-
-      if (updateZoom(mapPan)) {
-        mapPan.interceptUpdated = true;
-        renderAllResizedStatics(options, mapPan);
-        craftList.forEach(e => {drawMap.updateWepRanges(e, mapPan);});
-        drawMap.updateSpawn(spawnPoints['player'], mapPan);
-        drawMap.updateSpawn(spawnPoints['enemy'], mapPan);
-      }
-
-      if (updatePan(mapPan)) {
-        renderGrid(drawMap.drawGrid(mapPan, options, reReRenderScaleBar));
-      }
-
       craftList.forEach(crafto => {
         craftAI(crafto, workTime);
         calcHeading(crafto);
-
-        //changeElementTT(crafto.mapID, crafto.loc.x, crafto.loc.y);
-        //changeElementTT(crafto.mapID + '-WEPS-RANGE', crafto.loc.x, crafto.loc.y);
 
         return crafto.weapons.find(wep => {
           if (wep.status === 'ready' && crafto.team.enemy.members.length > 0) {
@@ -468,15 +494,47 @@ const main = () => {
               if (
                 range < wep.range
               ) {
+                activeWepsList.push(wep);
                 wep.target = enemyo;
-                wepsFire(wep, timeDelta);
+                wepsFire(wep, workTime);
                 return wep.target;
               }
             });
-          } else if (wep.status === 'firing' || wep.status === 'reloading') {
-            wepsFire(wep, timeDelta);
+          } else if (wep.status === 'firing') {
+            wepsFire(wep, workTime);
+          } else if (wep.status === 'reloading') {
+            wepsFire(wep, workTime);
           }
         });
+      });
+
+      deadCraftList.forEach(crafto => {
+        calcMotion(crafto, workTime);
+      });
+    }
+
+    // if (mapPan.selectedChange) {
+    //   mapPan.selectedUnit.updateSelector;
+    // }
+
+    let someMapUpdate = false;
+    if (updateZoom(mapPan)) {
+      mapPan.interceptUpdated = true;
+      renderAllResizedStatics(options, mapPan);
+      craftList.forEach(e => {drawMap.updateWepRanges(e, mapPan);});
+      drawMap.updateSpawn(spawnPoints['player'], mapPan);
+      drawMap.updateSpawn(spawnPoints['enemy'], mapPan);
+      someMapUpdate = true;
+    }
+
+    if (updatePan(mapPan)) {
+      renderGrid(drawMap.drawGrid(mapPan, options, reReRenderScaleBar));
+      someMapUpdate = true;
+    }
+
+    if (!options.isPaused || someMapUpdate) {
+      activeWepsList.forEach(wep => {
+        updateWepLine(wep);
       });
 
       [
@@ -489,39 +547,12 @@ const main = () => {
             e.updateHeading = false;
             drawMap.updateCraft(e);
           }
-
         }
-        // const inBounds = boundsCheck(e.loc.x * mapPan.zoom + mapPan.x, e.loc.y * mapPan.zoom + mapPan.y, 30);
-        //
-        // if (!e.render && inBounds) {
-        //   e.render = true;
-        //   e.renderer();
-        // } else if (e.render && !inBounds) {
-        //   e.render = false;
-        //   e.renderer([]);
-        // } else if (e.render && inBounds) {
-        //   //make tt changes integrated into crafto object
-        //   changeElementTT(e.mapID, e.loc.x * mapPan.zoom, e.loc.y * mapPan.zoom);
-        //   if (e.type === 'craft') {
-        //     changeElementTT(e.mapID + '-WEPS-RANGE', e.loc.x * mapPan.zoom, e.loc.y * mapPan.zoom);
-        //   }
-        // } else if (!e.render && !inBounds) {
-        //   // do nothing
-        // } else {
-        //   console.log('Unknown render state for:');
-        //   console.log(e);
-        // }
-
-        // if (e.type === 'craft' && e.render) {
-        //   drawMap.updateCraft(e);
-        // }
       });
 
       deadCraftList.forEach(crafto => {
-        calcMotion(crafto, workTime);
         changeElementTT(crafto.mapID, crafto.loc.x * mapPan.zoom, crafto.loc.y * mapPan.zoom);
       });
-
     }
 
     stats.end(); //Stats FPS tracking
