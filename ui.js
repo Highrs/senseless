@@ -176,8 +176,8 @@ exports.addListeners = (options, mapPan, renderers, functions) => {
         functions.removeWaypoint();
       }
       functions.makeWaypoint({
-        x: (e.offsetX - mapPan.x) * mapPan.zoom,
-        y: (e.offsetY - mapPan.y) * mapPan.zoom
+        x: (e.offsetX - mapPan.x) / mapPan.zoom,
+        y: (e.offsetY - mapPan.y) / mapPan.zoom
       });
       console.log(mapPan);
       console.log('zoom = ' + mapPan.zoom);
