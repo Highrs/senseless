@@ -147,3 +147,7 @@ playerhtml, body {
   fill: #ffffffff;
   user-select: none;
 }
+.pathLine {
+  stroke-width: 0.5px;
+  stroke: #ffffff;
+}

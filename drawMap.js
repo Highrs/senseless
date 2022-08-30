@@ -68,7 +68,6 @@ exports.updateCraft = (crafto) => {
   document.getElementById(crafto.mapID + '-VECT_DOT').setAttribute(
     'transform', 'translate('+crafto.vec.x+', '+crafto.vec.y+')'
   );
-
 };
 exports.updateSelector = (crafto) => {
   if (crafto.selected) {
@@ -100,6 +99,30 @@ exports.updateWepRanges = (crafto, mapPan) => {
     );
     i++;
   });
+};
+exports.drawCraftPath = (crafto) => {
+  let drawnPath = ['g', {}];
+
+  drawnPath.push(
+    ['line', {
+      id: crafto.mapID + '-PATH',
+      x1: 0,
+      y1: 0,
+      x2: 100,
+      y2: 100,
+      class: 'pathLine'
+    }]
+  );
+
+  return drawnPath;
+};
+exports.updateCraftPath = (crafto, mapPan) => {
+  let waypointo = crafto.waypoints[0];
+  let path = document.getElementById(crafto.mapID + '-PATH');
+  path.setAttribute('x1', crafto.loc.x * mapPan.zoom);
+  path.setAttribute('y1', crafto.loc.y * mapPan.zoom);
+  path.setAttribute('x2', waypointo.loc.x * mapPan.zoom);
+  path.setAttribute('y2', waypointo.loc.y * mapPan.zoom);
 };
 
 exports.drawWep = (wepo) => {
@@ -311,8 +334,38 @@ exports.drawGridScaleBar = (options, mapPan) => {
   return bar;
 };
 
-exports.drawPage = () => {
+exports.drawWaypoints = (waypointList, mapPan) => {
+  let drawnWaypoints = ['g', {}];
 
+  waypointList.forEach(point => {
+    let id = point.craft.id + '-WAY'; //NEED TO ACCOUNT FOR MULTIPLE WAYPOINTS LATER
+    drawnWaypoints.push(
+      ['g',
+        tt(
+          point.loc.x * mapPan.zoom,
+          point.loc.y * mapPan.zoom,
+          {
+            class: 'standardBox',
+            id: id
+          }
+        ),
+        icons.waypoint(point)
+      ]
+    );
+  });
+
+  return drawnWaypoints;
+};
+exports.updateWaypoints = (waypointList, mapPan) => {
+  waypointList.forEach(point => {
+    //NEED TO ACCOUNT FOR MULTIPLE WAYPOINTS
+    document.getElementById(point.craft.id + '-WAY').setAttribute(
+      'transform', 'translate(' + point.loc.x * mapPan.zoom + ', ' + point.loc.y * mapPan.zoom + ')'
+    );
+  });
+};
+
+exports.drawPage = () => {
   return getSvg({w:getPageWidth(), h:getPageHeight() , i:'allTheStuff'}).concat([
     ['defs'],
 
@@ -324,6 +377,8 @@ exports.drawPage = () => {
         ['g', {id: 'sp-player'}],
         ['g', {id: 'sp-enemy'}]
       ],
+      ['g', {id: 'craftPaths'}],
+      ['g', {id: 'waypoints'}],
       ['g', {id: 'weps'}],
       ['g', {id: 'crafts'}]
     ],

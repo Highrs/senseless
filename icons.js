@@ -77,4 +77,19 @@ module.exports = {
   arrow: (hOffset = 0, mirror = false) => {
     return ['path', tt(15 + hOffset, 15, {d: ('M '+(mirror?'+':'-')+'5, 10 L '+(mirror?'-':'+')+'5, 0 L '+(mirror?'+':'-')+'5, -10'), class: 'UIcon'})];
   },
+  waypoint: () => {
+    return ['g', {},
+      // ['rect', {
+      //   x:-corner,
+      //   y:-corner,
+      //   height: corner*2,
+      //   width: corner*2,
+      //   class: 'invisibleBox'
+      // }],
+      ['path', {d: 'M  6,  8 L  2,  2 L  8,  6 Z'}],
+      ['path', {d: 'M -6, -8 L -2, -2 L -8, -6 Z'}],
+      ['path', {d: 'M  6, -8 L  2, -2 L  8, -6 Z'}],
+      ['path', {d: 'M -6,  8 L -2,  2 L -8,  6 Z'}]
+    ];
+  },
 };

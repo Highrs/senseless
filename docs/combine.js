@@ -102,7 +102,6 @@ exports.updateCraft = (crafto) => {
   document.getElementById(crafto.mapID + '-VECT_DOT').setAttribute(
     'transform', 'translate('+crafto.vec.x+', '+crafto.vec.y+')'
   );
-
 };
 exports.updateSelector = (crafto) => {
   if (crafto.selected) {
@@ -134,6 +133,30 @@ exports.updateWepRanges = (crafto, mapPan) => {
     );
     i++;
   });
+};
+exports.drawCraftPath = (crafto) => {
+  let drawnPath = ['g', {}];
+
+  drawnPath.push(
+    ['line', {
+      id: crafto.mapID + '-PATH',
+      x1: 0,
+      y1: 0,
+      x2: 100,
+      y2: 100,
+      class: 'pathLine'
+    }]
+  );
+
+  return drawnPath;
+};
+exports.updateCraftPath = (crafto, mapPan) => {
+  let waypointo = crafto.waypoints[0];
+  let path = document.getElementById(crafto.mapID + '-PATH');
+  path.setAttribute('x1', crafto.loc.x * mapPan.zoom);
+  path.setAttribute('y1', crafto.loc.y * mapPan.zoom);
+  path.setAttribute('x2', waypointo.loc.x * mapPan.zoom);
+  path.setAttribute('y2', waypointo.loc.y * mapPan.zoom);
 };
 
 exports.drawWep = (wepo) => {
@@ -345,8 +368,38 @@ exports.drawGridScaleBar = (options, mapPan) => {
   return bar;
 };
 
-exports.drawPage = () => {
+exports.drawWaypoints = (waypointList, mapPan) => {
+  let drawnWaypoints = ['g', {}];
 
+  waypointList.forEach(point => {
+    let id = point.craft.id + '-WAY'; //NEED TO ACCOUNT FOR MULTIPLE WAYPOINTS LATER
+    drawnWaypoints.push(
+      ['g',
+        tt(
+          point.loc.x * mapPan.zoom,
+          point.loc.y * mapPan.zoom,
+          {
+            class: 'standardBox',
+            id: id
+          }
+        ),
+        icons.waypoint(point)
+      ]
+    );
+  });
+
+  return drawnWaypoints;
+};
+exports.updateWaypoints = (waypointList, mapPan) => {
+  waypointList.forEach(point => {
+    //NEED TO ACCOUNT FOR MULTIPLE WAYPOINTS
+    document.getElementById(point.craft.id + '-WAY').setAttribute(
+      'transform', 'translate(' + point.loc.x * mapPan.zoom + ', ' + point.loc.y * mapPan.zoom + ')'
+    );
+  });
+};
+
+exports.drawPage = () => {
   return getSvg({w:getPageWidth(), h:getPageHeight() , i:'allTheStuff'}).concat([
     ['defs'],
 
@@ -358,6 +411,8 @@ exports.drawPage = () => {
         ['g', {id: 'sp-player'}],
         ['g', {id: 'sp-enemy'}]
       ],
+      ['g', {id: 'craftPaths'}],
+      ['g', {id: 'waypoints'}],
       ['g', {id: 'weps'}],
       ['g', {id: 'crafts'}]
     ],
@@ -519,6 +574,21 @@ module.exports = {
   arrow: (hOffset = 0, mirror = false) => {
     return ['path', tt(15 + hOffset, 15, {d: ('M '+(mirror?'+':'-')+'5, 10 L '+(mirror?'-':'+')+'5, 0 L '+(mirror?'+':'-')+'5, -10'), class: 'UIcon'})];
   },
+  waypoint: () => {
+    return ['g', {},
+      // ['rect', {
+      //   x:-corner,
+      //   y:-corner,
+      //   height: corner*2,
+      //   width: corner*2,
+      //   class: 'invisibleBox'
+      // }],
+      ['path', {d: 'M  6,  8 L  2,  2 L  8,  6 Z'}],
+      ['path', {d: 'M -6, -8 L -2, -2 L -8, -6 Z'}],
+      ['path', {d: 'M  6, -8 L  2, -2 L  8, -6 Z'}],
+      ['path', {d: 'M -6,  8 L -2,  2 L -8,  6 Z'}]
+    ];
+  },
 };
 
 },{"onml/tt.js":10}],6:[function(require,module,exports){
@@ -573,6 +643,10 @@ Window.options = {
 };
 const options = Window.options;
 
+let craftList = [];
+let deadCraftList = [];
+let activeWepsList = [];
+let waypointList = [];
 let mapPan = {
   x: 0,
   y: 0,
@@ -593,6 +667,11 @@ let mapPan = {
   selectedUnit: undefined,
   selectedChange: false,
   preppingWaypoint: false,
+
+  waypointsUpdated: false,
+  waypointList: waypointList,
+
+  someMapUpdate: true
 };
 const spawnPoints = {
   'player':  {
@@ -619,9 +698,6 @@ const weps = {
   Lance:      {damage: 2, range: 100, reloadTime: 1.000, pulseTime: 1.000, color: "wepFire1"},
   SuperLance: {damage: 3, range: 300, reloadTime: 5.000, pulseTime: 1.000, color: "wepFire2"}
 };
-let craftList = [];
-let deadCraftList = [];
-let activeWepsList = [];
 function rand(mean, deviation, prec = 0, upper = Infinity, lower = -Infinity) {
   let max = mean + deviation > upper ? upper : mean + deviation;
   let min = mean - deviation < lower ? lower : mean - deviation;
@@ -634,6 +710,11 @@ function rand(mean, deviation, prec = 0, upper = Infinity, lower = -Infinity) {
   );
 }
 const sqrt  = Math.sqrt;
+function remove(array, item){
+  let i; // Thanks Silver
+  while((i = array.indexOf(item))>-1){ array.splice(i, 1); }
+  return array;
+}
 
 const mkRndr = (place) => {
   return renderer(document.getElementById(place));
@@ -651,8 +732,6 @@ const genPoint = (spawnPoint, point = {x: 0, y: 0}) => {
 const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
   //(crafto, name, id, owner = 'EMPIRE')
   const initWait = 10;
-  advRenderer.appendRend('crafts', (['g', {id: mapID}]));
-  advRenderer.appendRend('wepsRanges', (['g', {id: mapID + '-WEPS-RANGE'}]));
 
   let newCrafto = Object.assign(
     crafto,
@@ -670,7 +749,9 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
       loc: {x: 0, y: 0, z: 0},
       vec: {x: 0, y: 0, z: 0},
       team: teams[owner],
+
       waypoints: [],
+      selectorsNeedUpdating: true,
 
       weapons: [],
       ranges: [],
@@ -696,6 +777,11 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
       state: 'normal'
     }
   );
+
+  advRenderer.appendRend('crafts', (['g', {id: mapID}]));
+  advRenderer.appendRend('wepsRanges', (['g', {id: mapID + '-WEPS-RANGE'}]));
+  advRenderer.appendRend('craftPaths', drawMap.drawCraftPath(crafto));
+  hide(crafto.mapID + '-PATH');
 
   newCrafto.renderer = function () {
     advRenderer.normRend(mapID, drawMap.drawCraft(newCrafto));
@@ -789,9 +875,14 @@ const changeElementTT = (id, x, y) => {
   );
 };
 const calcMotion = (crafto, workTime) => {
-  ['x', 'y'].forEach(e => {
-      crafto.loc[e] += crafto.vec[e] * workTime;
-    });
+  if (crafto.waypoints.length > 0) {
+
+    ['x', 'y'].forEach(e => {
+        crafto.loc[e] += crafto.vec[e] * workTime;
+      });
+  }
+
+
 };
 const calcRange = (pt1, pt2) => {
   const dx = pt1.x - pt2.x;
@@ -826,7 +917,7 @@ const wepsFire = (wep, td) => {
     case 'firing':
       wep.pulseProg += td;
       if (wep.pulseProg >= wep.pulseTime) {
-        activeWepsList.splice(activeWepsList.indexOf(wep), 1);
+        remove(activeWepsList, wep);
         wep.status = 'reloading';
         wep.pulseProg = 0;
         wep.target = {};
@@ -855,8 +946,8 @@ const killCraft = (crafto) => {
     crafto.team.enemy.kills += 1;
 
     deadCraftList.push(crafto);
-    craftList.splice(craftList.indexOf(crafto), 1);
-    crafto.team.members.splice(crafto.team.members.indexOf(crafto), 1);
+    remove(craftList, crafto);
+    remove(crafto.team.members, crafto);
     crafto.weapons.forEach(wep => {
       hide(wep.mapID);
       hide(crafto.id + '-WEPRANGE');
@@ -871,7 +962,7 @@ const craftAI = (crafto, workTime) => {
 const updateZoom = (mapPan) => {
   // Updates Zoom (WHO WHOULDA THOUGHT?)
   if (mapPan.zoomChange != 0) {
-    if (mapPan.zoom + mapPan.zoomChange < 1) {
+    if (mapPan.zoom + mapPan.zoomChange < 0.5) {
       mapPan.zoom = 1;
     } else if (mapPan.zoom + mapPan.zoomChange > 20) {
       mapPan.zoom = 20;
@@ -897,6 +988,21 @@ const updatePan = (mapPan) => {
   }
   return false;
 };
+const makeWaypoint = (cursorLoc) => {
+  let point = {
+    craft: mapPan.selectedUnit,
+    loc: {x: cursorLoc.x, y: cursorLoc.y}
+  };
+
+  mapPan.waypointsUpdated = true;
+
+  mapPan.selectedUnit.waypoints[0] = point;
+  waypointList.push(point);
+};
+const removeWaypoint = (crafto = mapPan.selectedUnit) => {
+  remove(waypointList, crafto.waypoints[0]);
+  crafto.waypoints.splice(0, 1);
+};
 
 const main = () => {
   console.log('Giant alien spiders are no joke.');
@@ -916,14 +1022,13 @@ const main = () => {
   advRenderer.normRend('screenFrame', drawMap.drawScreenFrame());
 
   let renderBoxSettings     = mkRndr('boxMainSettings');
+  let renderWaypoints       = mkRndr('waypoints');
 
   makeManyCraft('arrow', 3, 'player');
   makeManyCraft('bolt', 2, 'player');
   makeManyCraft('spear', 1, 'player');
 
   makeManyCraft('swarmer', 15, 'enemy');
-
-  //CHANGE 'IS PAUSED' TO SEPARATE AI AND ZOOM/PAN!!!
 
   function reReRenderScaleBar(options, mapPan) {
     renderGridScaleBar(drawMap.drawGridScaleBar(options, mapPan));
@@ -1007,7 +1112,12 @@ const main = () => {
 
   reRendScreenFrame(mapPan, renderers);
 
-  ui.addListeners(options, mapPan, renderers);
+  let listenExportFunctions = {
+    makeWaypoint: makeWaypoint,
+    removeWaypoint: removeWaypoint
+  };
+
+  ui.addListeners(options, mapPan, renderers, listenExportFunctions);
 
   const loop = () => {
 
@@ -1050,26 +1160,28 @@ const main = () => {
       });
     }
 
-    // if (mapPan.selectedChange) {
-    //   mapPan.selectedUnit.updateSelector;
-    // }
+    if (mapPan.waypointsUpdated) {
+      renderWaypoints(drawMap.drawWaypoints(waypointList, mapPan));
+      mapPan.waypointsUpdated = false;
+    }
 
-    let someMapUpdate = false;
     if (updateZoom(mapPan)) {
+      console.log(mapPan.zoom);
       mapPan.interceptUpdated = true;
       renderAllResizedStatics(options, mapPan);
       craftList.forEach(e => {drawMap.updateWepRanges(e, mapPan);});
       drawMap.updateSpawn(spawnPoints['player'], mapPan);
       drawMap.updateSpawn(spawnPoints['enemy'], mapPan);
-      someMapUpdate = true;
+      drawMap.updateWaypoints(waypointList, mapPan);
+      mapPan.someMapUpdate = true;
     }
 
     if (updatePan(mapPan)) {
       renderGrid(drawMap.drawGrid(mapPan, options, reReRenderScaleBar));
-      someMapUpdate = true;
+      mapPan.someMapUpdate = true;
     }
 
-    if (!options.isPaused || someMapUpdate) {
+    if (!options.isPaused || mapPan.someMapUpdate) {
       activeWepsList.forEach(wep => {
         updateWepLine(wep);
       });
@@ -1078,11 +1190,19 @@ const main = () => {
         ...craftList
       ].forEach(e => {
         changeElementTT(e.mapID, e.loc.x * mapPan.zoom, e.loc.y * mapPan.zoom);
+        if (e.selectorsNeedUpdating) {
+          e.updateSelector();
+          e.selectorsNeedUpdating = false;
+        }
         if (e.type === 'craft') {
           changeElementTT(e.mapID + '-WEPS-RANGE', e.loc.x * mapPan.zoom, e.loc.y * mapPan.zoom);
           if (e.updateHeading) {
             e.updateHeading = false;
             drawMap.updateCraft(e);
+          }
+          if (e.waypoints.length > 0) {
+            unhide(e.mapID + '-PATH');
+            drawMap.updateCraftPath(e, mapPan);
           }
         }
       });
@@ -1090,6 +1210,8 @@ const main = () => {
       deadCraftList.forEach(crafto => {
         changeElementTT(crafto.mapID, crafto.loc.x * mapPan.zoom, crafto.loc.y * mapPan.zoom);
       });
+
+      mapPan.someMapUpdate = false;
     }
 
     stats.end(); //Stats FPS tracking
@@ -1326,23 +1448,25 @@ exports.addCraftListeners = (crafto, mapPan) => {
   document.getElementById(crafto.id + '-SELECTOR').addEventListener('mousedown', event => {
     event.stopPropagation();
 
-    if (mapPan.selectedUnit !== crafto) {
-      if (mapPan.unitSelected) {
-        mapPan.selectedUnit.selected = false;
-        mapPan.selectedUnit.updateSelector();
-        // console.log('Unselected 1');
-      }
-
-      // console.log('Selected');
+    if (mapPan.unitSelected && mapPan.selectedUnit !== crafto) {
+      mapPan.selectedUnit.selected = false;
+      mapPan.selectedChange = true;
+      mapPan.someMapUpdate = true;
+      mapPan.selectedUnit.selectorsNeedUpdating = true;
+      mapPan.unitSelected = false;
+      mapPan.selectedUnit = undefined;
+    }
+    if (!mapPan.unitSelected) {
       crafto.selected = true;
       mapPan.unitSelected = true;
-      mapPan.selectedChange = true;
       mapPan.selectedUnit = crafto;
-      mapPan.selectedUnit.updateSelector();
+      mapPan.selectedChange = true;
+      mapPan.someMapUpdate = true;
+      crafto.selectorsNeedUpdating = true;
     }
   });
 };
-exports.addListeners = (options, mapPan, renderers) => {
+exports.addListeners = (options, mapPan, renderers, functions) => {
   function pause() {
     options.isPaused = true;
     console.log('|| Unfocused');
@@ -1382,7 +1506,7 @@ exports.addListeners = (options, mapPan, renderers) => {
         break;
       case 'ControlLeft':
         if (mapPan.unitSelected) {
-          console.log('Ctrl Key Down');
+          // console.log('Ctrl Key Down');
           mapPan.preppingWaypoint = true;
         }
         break;
@@ -1393,7 +1517,11 @@ exports.addListeners = (options, mapPan, renderers) => {
     switch (e.code) {
       case 'KeyM':
         if (mapPan.preppingWaypoint) {
-          console.log('M Key Up');
+          mapPan.preppingWaypoint = false;
+        }
+        break;
+      case 'ControlLeft':
+        if (mapPan.preppingWaypoint) {
           mapPan.preppingWaypoint = false;
         }
         break;
@@ -1408,19 +1536,37 @@ exports.addListeners = (options, mapPan, renderers) => {
   let pastOffsetY = 0;
 
   document.getElementById('content').addEventListener('mousedown', e => {
-    if (mapPan.unitSelected && !mapPan.waypointing) {
+    if (mapPan.preppingWaypoint && e.which === 1) {
+      if (mapPan.selectedUnit.waypoints.length > 0) {
+        functions.removeWaypoint();
+      }
+      functions.makeWaypoint({
+        x: (e.offsetX - mapPan.x) * mapPan.zoom,
+        y: (e.offsetY - mapPan.y) * mapPan.zoom
+      });
+      console.log(mapPan);
+      console.log('zoom = ' + mapPan.zoom);
+      console.log('pan y = ' + mapPan.y);
+      console.log('mouse y = ' + e.offsetY);
+      console.log('mouse rel y = ' + (e.offsetY - mapPan.y));
+      console.log('waypoint y = ' + (e.offsetY - mapPan.y) * mapPan.zoom);
+
+      // console.log(mapPan.waypointList);
+    } else if (mapPan.unitSelected && !mapPan.preppingWaypoint) {
       mapPan.selectedUnit.selected = false;
-      mapPan.selectedUnit.updateSelector();
+      mapPan.someMapUpdate = true;
+      mapPan.selectedUnit.selectorsNeedUpdating = true;
       mapPan.unitSelected = false;
       mapPan.selectedUnit = undefined;
       // console.log('Unselected 2');
     }
-
     if (e.which === 3) {
       pastOffsetX = e.offsetX;
       pastOffsetY = e.offsetY;
       isPanning = true;
     }
+
+
   });
   document.getElementById('content').addEventListener('mousemove', e => {
     if (isPanning) {
@@ -1446,7 +1592,6 @@ exports.addListeners = (options, mapPan, renderers) => {
       mapPan.zoomChange -= zoomStep;
     }
   }, {passive: true});
-  // document.
 };
 
 },{}]},{},[7]);

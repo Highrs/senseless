@@ -83,23 +83,25 @@ exports.addCraftListeners = (crafto, mapPan) => {
   document.getElementById(crafto.id + '-SELECTOR').addEventListener('mousedown', event => {
     event.stopPropagation();
 
-    if (mapPan.selectedUnit !== crafto) {
-      if (mapPan.unitSelected) {
-        mapPan.selectedUnit.selected = false;
-        mapPan.selectedUnit.updateSelector();
-        // console.log('Unselected 1');
-      }
-
-      // console.log('Selected');
+    if (mapPan.unitSelected && mapPan.selectedUnit !== crafto) {
+      mapPan.selectedUnit.selected = false;
+      mapPan.selectedChange = true;
+      mapPan.someMapUpdate = true;
+      mapPan.selectedUnit.selectorsNeedUpdating = true;
+      mapPan.unitSelected = false;
+      mapPan.selectedUnit = undefined;
+    }
+    if (!mapPan.unitSelected) {
       crafto.selected = true;
       mapPan.unitSelected = true;
-      mapPan.selectedChange = true;
       mapPan.selectedUnit = crafto;
-      mapPan.selectedUnit.updateSelector();
+      mapPan.selectedChange = true;
+      mapPan.someMapUpdate = true;
+      crafto.selectorsNeedUpdating = true;
     }
   });
 };
-exports.addListeners = (options, mapPan, renderers) => {
+exports.addListeners = (options, mapPan, renderers, functions) => {
   function pause() {
     options.isPaused = true;
     console.log('|| Unfocused');
@@ -139,7 +141,7 @@ exports.addListeners = (options, mapPan, renderers) => {
         break;
       case 'ControlLeft':
         if (mapPan.unitSelected) {
-          console.log('Ctrl Key Down');
+          // console.log('Ctrl Key Down');
           mapPan.preppingWaypoint = true;
         }
         break;
@@ -150,7 +152,11 @@ exports.addListeners = (options, mapPan, renderers) => {
     switch (e.code) {
       case 'KeyM':
         if (mapPan.preppingWaypoint) {
-          console.log('M Key Up');
+          mapPan.preppingWaypoint = false;
+        }
+        break;
+      case 'ControlLeft':
+        if (mapPan.preppingWaypoint) {
           mapPan.preppingWaypoint = false;
         }
         break;
@@ -165,19 +171,37 @@ exports.addListeners = (options, mapPan, renderers) => {
   let pastOffsetY = 0;
 
   document.getElementById('content').addEventListener('mousedown', e => {
-    if (mapPan.unitSelected && !mapPan.waypointing) {
+    if (mapPan.preppingWaypoint && e.which === 1) {
+      if (mapPan.selectedUnit.waypoints.length > 0) {
+        functions.removeWaypoint();
+      }
+      functions.makeWaypoint({
+        x: (e.offsetX - mapPan.x) * mapPan.zoom,
+        y: (e.offsetY - mapPan.y) * mapPan.zoom
+      });
+      console.log(mapPan);
+      console.log('zoom = ' + mapPan.zoom);
+      console.log('pan y = ' + mapPan.y);
+      console.log('mouse y = ' + e.offsetY);
+      console.log('mouse rel y = ' + (e.offsetY - mapPan.y));
+      console.log('waypoint y = ' + (e.offsetY - mapPan.y) * mapPan.zoom);
+
+      // console.log(mapPan.waypointList);
+    } else if (mapPan.unitSelected && !mapPan.preppingWaypoint) {
       mapPan.selectedUnit.selected = false;
-      mapPan.selectedUnit.updateSelector();
+      mapPan.someMapUpdate = true;
+      mapPan.selectedUnit.selectorsNeedUpdating = true;
       mapPan.unitSelected = false;
       mapPan.selectedUnit = undefined;
       // console.log('Unselected 2');
     }
-
     if (e.which === 3) {
       pastOffsetX = e.offsetX;
       pastOffsetY = e.offsetY;
       isPanning = true;
     }
+
+
   });
   document.getElementById('content').addEventListener('mousemove', e => {
     if (isPanning) {
@@ -203,5 +227,4 @@ exports.addListeners = (options, mapPan, renderers) => {
       mapPan.zoomChange -= zoomStep;
     }
   }, {passive: true});
-  // document.
 };
