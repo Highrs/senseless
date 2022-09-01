@@ -46,12 +46,12 @@ exports.drawCraft = (crafto) => {
       id: crafto.mapID + '-VECT_LINE',
       x1: 0,
       y1: 0,
-      x2: crafto.vec.x,
-      y2: crafto.vec.y,
+      x2: 0,
+      y2: 0,
       class: 'vector'
     }],
     ['g', {
-      transform: 'translate('+crafto.vec.x+', '+crafto.vec.y+')',
+      transform: 'translate('+0+', '+0+')',
       id: crafto.mapID + '-VECT_DOT'
     }, [
       'circle',
@@ -93,14 +93,14 @@ exports.updateCraft = (crafto) => {
   );
 
   document.getElementById(crafto.mapID + '-VECT_LINE').setAttribute(
-    'x2', '' + crafto.vec.x
+    'x2', '' + crafto.vec.x * 5
   );
   document.getElementById(crafto.mapID + '-VECT_LINE').setAttribute(
-    'y2', '' + crafto.vec.y
+    'y2', '' + crafto.vec.y * 5
   );
 
   document.getElementById(crafto.mapID + '-VECT_DOT').setAttribute(
-    'transform', 'translate('+crafto.vec.x+', '+crafto.vec.y+')'
+    'transform', 'translate('+crafto.vec.x * 5+', '+crafto.vec.y * 5+')'
   );
 };
 exports.updateSelector = (crafto) => {
@@ -372,7 +372,7 @@ exports.drawWaypoints = (waypointList, mapPan) => {
   let drawnWaypoints = ['g', {}];
 
   waypointList.forEach(point => {
-    let id = point.craft.id + '-WAY'; //NEED TO ACCOUNT FOR MULTIPLE WAYPOINTS LATER
+    let id = point.craft.mapID + '-WAY'; //NEED TO ACCOUNT FOR MULTIPLE WAYPOINTS LATER
     drawnWaypoints.push(
       ['g',
         tt(
@@ -393,7 +393,7 @@ exports.drawWaypoints = (waypointList, mapPan) => {
 exports.updateWaypoints = (waypointList, mapPan) => {
   waypointList.forEach(point => {
     //NEED TO ACCOUNT FOR MULTIPLE WAYPOINTS
-    document.getElementById(point.craft.id + '-WAY').setAttribute(
+    document.getElementById(point.craft.mapID + '-WAY').setAttribute(
       'transform', 'translate(' + point.loc.x * mapPan.zoom + ', ' + point.loc.y * mapPan.zoom + ')'
     );
   });
@@ -474,7 +474,7 @@ module.exports = {
     cargoCap: 0,
     fuelCapacity: 50,
     fuelConsumption: 0.1,
-    accel: 5,
+    accel: 10,
     home: 'astroDeltaB',
     weaponsList: ['MiniLance'],
     health: 3
@@ -596,9 +596,11 @@ module.exports = {
 
   keys: () => {
     return [
-      "Senseless V1.2a",
-      "RMB + Drag to pan.",
-      "Scroll to zoom."
+      ".Senseless V1.2a",
+      ".RMB + Drag to pan.",
+      ".Scroll to zoom.",
+      ".Ctrl + LMB to place",
+      "waypoint for selected."
     ];
   },
 
@@ -629,7 +631,7 @@ const craftIDer   = iDerGenGen('C');
 const iDWepGen    = iDerGenGen('W');
 
 Window.options = {
-  rate: 0.2,
+  rate: 1,
   targetFrames: 60,
 
   rateSetting: 3,
@@ -678,13 +680,15 @@ const spawnPoints = {
     side: 'player',
     loc: {x: 150, y: 150, z: 0},
     r: 50,
-    vec: {x:-10, y:-10},
+    vec: {x:0, y:0},
+    heading: 135,
     renderer: undefined},
   'enemy':    {
     side: 'enemy',
     loc: {x: -150, y: -150, z: 0},
     r: 100,
-    vec:{x:20, y:20,},
+    vec:{x:0, y:0,},
+    heading: -135,
     renderer: undefined}
 };
 const teams = {
@@ -710,7 +714,7 @@ function rand(mean, deviation, prec = 0, upper = Infinity, lower = -Infinity) {
   );
 }
 const sqrt  = Math.sqrt;
-function remove(array, item){
+function remove(array, item) {
   let i; // Thanks Silver
   while((i = array.indexOf(item))>-1){ array.splice(i, 1); }
   return array;
@@ -752,6 +756,7 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
 
       waypoints: [],
       selectorsNeedUpdating: true,
+      courseChange: true,
 
       weapons: [],
       ranges: [],
@@ -761,7 +766,10 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
 
       name: name,
       speed: 0,
+
       heading: 0,
+      updateHeading: true,
+
       accelStat: 0,
       intercept: {},
       route: [],
@@ -772,7 +780,6 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
       waitCycle: 0 + initWait,
       render: false,
       visible: true,
-      updateHeading: true,
 
       state: 'normal'
     }
@@ -803,22 +810,12 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
   newCrafto.loc.x = point.x + spawnPoint.loc.x;
   newCrafto.loc.y = point.y + spawnPoint.loc.y;
 
-  newCrafto.vec.x = spawnPoint.vec.x;
-  newCrafto.vec.y = spawnPoint.vec.y;
-
-  //calcHeading({x:0, y:0}, newCrafto.vec);
+  newCrafto.heading = spawnPoint.heading;
 
   craftList.push(newCrafto);
   teams[owner].members.push(newCrafto);
 
   return newCrafto;
-};
-const calcHeading = (crafto) => {
-  let newHeading = (Math.atan2(crafto.vec.y, crafto.vec.x) * 180 / Math.PI) - 90;
-  if (newHeading !== crafto.heading) {
-    crafto.updateHeading = true;
-    crafto.heading = newHeading;
-  }
 };
 const makeManyCraft = (craftType, numberToMake, owner = undefined) => {
   for (let i = 0; i < numberToMake; i++) {
@@ -873,16 +870,6 @@ const changeElementTT = (id, x, y) => {
   document.getElementById(id).setAttribute(
     'transform', 'translate(' + x + ', ' + y + ')'
   );
-};
-const calcMotion = (crafto, workTime) => {
-  if (crafto.waypoints.length > 0) {
-
-    ['x', 'y'].forEach(e => {
-        crafto.loc[e] += crafto.vec[e] * workTime;
-      });
-  }
-
-
 };
 const calcRange = (pt1, pt2) => {
   const dx = pt1.x - pt2.x;
@@ -941,6 +928,7 @@ const unhide = (id) => {
   document.getElementById(id).style.visibility = "visible";
 };
 const killCraft = (crafto) => {
+    removeWaypoint(crafto);
     crafto.dead = true;
     crafto.team.losses += 1;
     crafto.team.enemy.kills += 1;
@@ -1000,8 +988,41 @@ const makeWaypoint = (cursorLoc) => {
   waypointList.push(point);
 };
 const removeWaypoint = (crafto = mapPan.selectedUnit) => {
-  remove(waypointList, crafto.waypoints[0]);
-  crafto.waypoints.splice(0, 1);
+  if (crafto.waypoints.length > 0) {
+    remove(waypointList, crafto.waypoints[0]);
+    crafto.waypoints.splice(0, 1);
+    hide(crafto.mapID + '-PATH');
+    hide(crafto.mapID + '-WAY');
+  }
+};
+
+const calcMotion = (crafto, workTime) => {
+  if (crafto.waypoints.length > 0) {
+    if (crafto.courseChange) {
+
+      let relX = crafto.waypoints[0].loc.x - crafto.loc.x;
+      let relY = crafto.waypoints[0].loc.y - crafto.loc.y;
+
+      let newHeadingRad = ( Math.atan2(relY, relX) - (90 * Math.PI / 180));
+      let newHeadingDeg = ( newHeadingRad * (180 / Math.PI) );
+
+      crafto.vec.x = Math.sin(-newHeadingRad) * crafto.accel;
+      crafto.vec.y = Math.cos(newHeadingRad) * crafto.accel;
+
+      crafto.updateHeading = true;
+      crafto.heading = newHeadingDeg;
+      crafto.courseChange = false;
+
+    }
+
+    ['x', 'y'].forEach(e => {
+        crafto.loc[e] += crafto.vec[e] * workTime;
+    });
+
+    if (calcRange(crafto.loc, crafto.waypoints[0].loc) < (crafto.accel * workTime)) {
+      removeWaypoint(crafto);
+    }
+  }
 };
 
 const main = () => {
@@ -1011,8 +1032,8 @@ const main = () => {
   renderMain(drawMap.drawPage());
 
   let renderRateCounter     = undefined;
-  const initRateRenderer = () => {
-    renderRateCounter     = mkRndr('rateCounter');
+  const initRateRenderer    = () => {
+    renderRateCounter       = mkRndr('rateCounter');
   };
 
   let renderGrid            = mkRndr('grid');
@@ -1132,7 +1153,6 @@ const main = () => {
     if (!options.isPaused) {
       craftList.forEach(crafto => {
         craftAI(crafto, workTime);
-        calcHeading(crafto);
 
         return crafto.weapons.find(wep => {
           if (wep.status === 'ready' && crafto.team.enemy.members.length > 0) {
@@ -1166,7 +1186,6 @@ const main = () => {
     }
 
     if (updateZoom(mapPan)) {
-      console.log(mapPan.zoom);
       mapPan.interceptUpdated = true;
       renderAllResizedStatics(options, mapPan);
       craftList.forEach(e => {drawMap.updateWepRanges(e, mapPan);});
@@ -1544,12 +1563,7 @@ exports.addListeners = (options, mapPan, renderers, functions) => {
         x: (e.offsetX - mapPan.x) / mapPan.zoom,
         y: (e.offsetY - mapPan.y) / mapPan.zoom
       });
-      console.log(mapPan);
-      console.log('zoom = ' + mapPan.zoom);
-      console.log('pan y = ' + mapPan.y);
-      console.log('mouse y = ' + e.offsetY);
-      console.log('mouse rel y = ' + (e.offsetY - mapPan.y));
-      console.log('waypoint y = ' + (e.offsetY - mapPan.y) * mapPan.zoom);
+      mapPan.selectedUnit.courseChange = true;
 
       // console.log(mapPan.waypointList);
     } else if (mapPan.unitSelected && !mapPan.preppingWaypoint) {

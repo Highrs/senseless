@@ -32,7 +32,7 @@ module.exports = {
     cargoCap: 0,
     fuelCapacity: 50,
     fuelConsumption: 0.1,
-    accel: 5,
+    accel: 10,
     home: 'astroDeltaB',
     weaponsList: ['MiniLance'],
     health: 3

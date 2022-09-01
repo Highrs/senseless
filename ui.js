@@ -179,12 +179,7 @@ exports.addListeners = (options, mapPan, renderers, functions) => {
         x: (e.offsetX - mapPan.x) / mapPan.zoom,
         y: (e.offsetY - mapPan.y) / mapPan.zoom
       });
-      console.log(mapPan);
-      console.log('zoom = ' + mapPan.zoom);
-      console.log('pan y = ' + mapPan.y);
-      console.log('mouse y = ' + e.offsetY);
-      console.log('mouse rel y = ' + (e.offsetY - mapPan.y));
-      console.log('waypoint y = ' + (e.offsetY - mapPan.y) * mapPan.zoom);
+      mapPan.selectedUnit.courseChange = true;
 
       // console.log(mapPan.waypointList);
     } else if (mapPan.unitSelected && !mapPan.preppingWaypoint) {

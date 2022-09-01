@@ -12,12 +12,12 @@ exports.drawCraft = (crafto) => {
       id: crafto.mapID + '-VECT_LINE',
       x1: 0,
       y1: 0,
-      x2: crafto.vec.x,
-      y2: crafto.vec.y,
+      x2: 0,
+      y2: 0,
       class: 'vector'
     }],
     ['g', {
-      transform: 'translate('+crafto.vec.x+', '+crafto.vec.y+')',
+      transform: 'translate('+0+', '+0+')',
       id: crafto.mapID + '-VECT_DOT'
     }, [
       'circle',
@@ -59,14 +59,14 @@ exports.updateCraft = (crafto) => {
   );
 
   document.getElementById(crafto.mapID + '-VECT_LINE').setAttribute(
-    'x2', '' + crafto.vec.x
+    'x2', '' + crafto.vec.x * 5
   );
   document.getElementById(crafto.mapID + '-VECT_LINE').setAttribute(
-    'y2', '' + crafto.vec.y
+    'y2', '' + crafto.vec.y * 5
   );
 
   document.getElementById(crafto.mapID + '-VECT_DOT').setAttribute(
-    'transform', 'translate('+crafto.vec.x+', '+crafto.vec.y+')'
+    'transform', 'translate('+crafto.vec.x * 5+', '+crafto.vec.y * 5+')'
   );
 };
 exports.updateSelector = (crafto) => {
@@ -338,7 +338,7 @@ exports.drawWaypoints = (waypointList, mapPan) => {
   let drawnWaypoints = ['g', {}];
 
   waypointList.forEach(point => {
-    let id = point.craft.id + '-WAY'; //NEED TO ACCOUNT FOR MULTIPLE WAYPOINTS LATER
+    let id = point.craft.mapID + '-WAY'; //NEED TO ACCOUNT FOR MULTIPLE WAYPOINTS LATER
     drawnWaypoints.push(
       ['g',
         tt(
@@ -359,7 +359,7 @@ exports.drawWaypoints = (waypointList, mapPan) => {
 exports.updateWaypoints = (waypointList, mapPan) => {
   waypointList.forEach(point => {
     //NEED TO ACCOUNT FOR MULTIPLE WAYPOINTS
-    document.getElementById(point.craft.id + '-WAY').setAttribute(
+    document.getElementById(point.craft.mapID + '-WAY').setAttribute(
       'transform', 'translate(' + point.loc.x * mapPan.zoom + ', ' + point.loc.y * mapPan.zoom + ')'
     );
   });
