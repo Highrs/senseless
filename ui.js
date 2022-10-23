@@ -101,6 +101,7 @@ exports.addCraftListeners = (crafto, mapPan) => {
     }
   });
 };
+
 exports.addListeners = (options, mapPan, renderers, functions) => {
   function pause() {
     options.isPaused = true;
@@ -170,9 +171,16 @@ exports.addListeners = (options, mapPan, renderers, functions) => {
   let pastOffsetX = 0;
   let pastOffsetY = 0;
 
+  //ADD PAUSE ON SPACE
+
   document.getElementById('content').addEventListener('mousedown', e => {
-    if (mapPan.preppingWaypoint && e.which === 1) {
-      if (mapPan.selectedUnit.waypoints.length > 0) {
+    if (
+      mapPan.selectedUnit &&
+      mapPan.selectedUnit.mobile &&
+      mapPan.preppingWaypoint &&
+      e.which === 1
+    ) {
+      if ( mapPan.selectedUnit.waypoints.length > 0) {
         functions.removeWaypoint();
       }
       functions.makeWaypoint({
@@ -180,9 +188,15 @@ exports.addListeners = (options, mapPan, renderers, functions) => {
         y: (e.offsetY - mapPan.y) / mapPan.zoom
       });
       mapPan.selectedUnit.courseChange = true;
+      mapPan.someMapUpdate = true;
+      mapPan.selectedUnit.selectorsNeedUpdating = true;
 
       // console.log(mapPan.waypointList);
-    } else if (mapPan.unitSelected && !mapPan.preppingWaypoint) {
+    } else if (
+      mapPan.unitSelected &&
+      !mapPan.preppingWaypoint &&
+      e.which !== 3
+    ) {
       mapPan.selectedUnit.selected = false;
       mapPan.someMapUpdate = true;
       mapPan.selectedUnit.selectorsNeedUpdating = true;
@@ -195,9 +209,8 @@ exports.addListeners = (options, mapPan, renderers, functions) => {
       pastOffsetY = e.offsetY;
       isPanning = true;
     }
-
-
   });
+
   document.getElementById('content').addEventListener('mousemove', e => {
     if (isPanning) {
       mapPan.x += e.offsetX - pastOffsetX;
@@ -208,10 +221,13 @@ exports.addListeners = (options, mapPan, renderers, functions) => {
     mapPan.mousePosX = e.offsetX;
     mapPan.mousePosY = e.offsetY;
   });
+
   window.addEventListener('mouseup', function () {
     isPanning = false;
   });
+
   document.getElementById('content').addEventListener('wheel', function (e) {
+    event.preventDefault();
     const zoomStep = 10**(0.05*mapPan.zoom)-1;
     mapPan.cursOriginX = e.offsetX - mapPan.x;
     mapPan.cursOriginY = e.offsetY - mapPan.y;
@@ -221,5 +237,5 @@ exports.addListeners = (options, mapPan, renderers, functions) => {
     if (e.deltaY > 0) {
       mapPan.zoomChange -= zoomStep;
     }
-  }, {passive: true});
+  });
 };

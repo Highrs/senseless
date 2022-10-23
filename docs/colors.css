@@ -60,6 +60,7 @@ playerhtml, body {
 .craftIconText {
   font: 0.75rem B612 Mono;
   stroke: none;
+  fill: #c9c9c9;
   user-select: none;
 }
 .enemyFill {
@@ -128,7 +129,7 @@ playerhtml, body {
 .grid {
   stroke-width: 0.5px;
   stroke: #a3a3a3ff;
-  fill: none;
+  fill: #474747;
 }
 .gridBold {
   stroke-width: 1px;

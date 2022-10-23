@@ -4,7 +4,7 @@ module.exports = cfg => {
   cfg.h = cfg.h || 256;
   cfg.i = cfg.i || 'sveg';
   return ['svg', {
-   xmlns: 'http://www.w3.org/2000/svg',
+    xmlns: 'http://www.w3.org/2000/svg',
     width: cfg.w + 1,
     height: cfg.h + 1,
     id: cfg.i,

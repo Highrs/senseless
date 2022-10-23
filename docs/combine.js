@@ -59,12 +59,17 @@ exports.drawCraft = (crafto) => {
     ]]
   ];
 
+  if (crafto.icon === undefined) {
+    throw 'No drawing instructions in hellTemp for ' + crafto.class;
+  }
+
   drawnCraft.push(
     ['g', {
         transform: 'rotate(' + crafto.heading + ')',
-        id: crafto.mapID + '-ROT'
+        id: crafto.mapID + '-ROT',
+        class: crafto.dead ? crafto.team.color + 'Dead' : crafto.team.color
       },
-      icons.craft(crafto)
+      crafto.icon
     ]
   );
 
@@ -73,7 +78,8 @@ exports.drawCraft = (crafto) => {
       ['text', {
         x: 5,
         y: 5,
-        class: 'craftIconText ' + crafto.team.color +'Fill'
+        // class: 'craftIconText ' + crafto.team.color +'Fill'
+        class: 'craftIconText'
       },
         crafto.id
       ]
@@ -103,6 +109,44 @@ exports.updateCraft = (crafto) => {
     'transform', 'translate('+crafto.vec.x * 5+', '+crafto.vec.y * 5+')'
   );
 };
+exports.drawStruct = (structo) => {
+  let drawnStruct = ['g', {id: structo.id}];
+
+  if (structo.icon === undefined) {
+    throw 'No drawing instructions in hellTemp for ' + structo.class;
+  }
+
+  drawnStruct.push(
+    ['g', {
+        transform: 'rotate(' + structo.heading + ')',
+        id: structo.mapID + '-ROT',
+        class: structo.dead ? structo.team.color + 'Dead' : structo.team.color
+      },
+      structo.icon
+    ]
+  );
+
+  if (!structo.dead) {
+    drawnStruct.push(
+      ['text', {
+        x: 5,
+        y: 5,
+        class: 'craftIconText ' + structo.team.color +'Fill'
+      },
+        structo.id
+      ]
+    );
+  }
+
+  drawnStruct.push(
+    icons.bracketSelected(structo.id + '-SELECTED', 2),
+    icons.brackets(structo.id + '-SELECTOR', 4)
+  );
+
+  return drawnStruct;
+};
+
+
 exports.updateSelector = (crafto) => {
   if (crafto.selected) {
     document.getElementById(crafto.id + '-SELECTED').style.visibility = "visible";
@@ -300,8 +344,9 @@ exports.drawBoxSettings = () => {
   return box;
 };
 
-const drawGrid = (mapPan, options, reReRenderScaleBar) => {
+exports.drawGrid = (mapPan, options, reReRenderScaleBar) => {
   let grid = ['g', {}];
+
   let actualGridStep = options.gridStep * mapPan.zoom;
   if (actualGridStep < 100) {actualGridStep *= 10;}
 
@@ -322,7 +367,6 @@ const drawGrid = (mapPan, options, reReRenderScaleBar) => {
 
   return grid;
 };
-exports.drawGrid = drawGrid;
 exports.drawGridScaleBar = (options, mapPan) => {
   let actualGridStep = options.gridStep * mapPan.zoom;
   let gridStep = actualGridStep;
@@ -367,6 +411,33 @@ exports.drawGridScaleBar = (options, mapPan) => {
 
   return bar;
 };
+exports.drawGridEdge = (mapPan, options) => {
+  let grid = ['g', {}];
+
+  let actualGridStep = options.gridStep * mapPan.zoom;
+  if (actualGridStep < 100) {actualGridStep *= 10;}
+
+  let gridRectStartX = - mapPan.x + (mapPan.x) % (actualGridStep) - actualGridStep;
+  let gridRectStartY = - mapPan.y + (mapPan.y) % (actualGridStep) - actualGridStep;
+  let gridRectEndX = gridRectStartX + getPageWidth() + actualGridStep * 2;
+  let gridRectEndY = gridRectStartY + getPageHeight() + actualGridStep * 2;
+
+  for (let x = gridRectStartX; x < (gridRectEndX); x += actualGridStep) {
+    grid.push(
+      icons.gridEdgeIndicator(x, - mapPan.y),
+      icons.gridEdgeIndicator(x, getPageHeight() - mapPan.y, 180)
+    );
+  }
+
+  for (let y = gridRectStartY; y < (gridRectEndY); y += actualGridStep) {
+    grid.push(
+      icons.gridEdgeIndicator(- mapPan.x, y, -90),
+      icons.gridEdgeIndicator(getPageWidth() - mapPan.x, y, 90)
+    );
+  }
+
+  return grid;
+};
 
 exports.drawWaypoints = (waypointList, mapPan) => {
   let drawnWaypoints = ['g', {}];
@@ -403,9 +474,9 @@ exports.drawPage = () => {
   return getSvg({w:getPageWidth(), h:getPageHeight() , i:'allTheStuff'}).concat([
     ['defs'],
 
-    ['g', {id: 'gridScaleBar'}],
     ['g', {id: 'map'},
       ['g', {id: 'grid'}],
+      ['g', {id: 'gridEdge'}],
       ['g', {id: 'wepsRanges'}],
       ['g', {id: 'spawnPoints'},
         ['g', {id: 'sp-player'}],
@@ -414,8 +485,10 @@ exports.drawPage = () => {
       ['g', {id: 'craftPaths'}],
       ['g', {id: 'waypoints'}],
       ['g', {id: 'weps'}],
+      ['g', {id: 'structures'}],
       ['g', {id: 'crafts'}]
     ],
+    ['g', {id: 'gridScaleBar'}],
     ['g', {id: 'screenFrame'}],
     ['g', {id: 'boxes'},
       ['g', {id: 'boxMainSettings'}]
@@ -430,7 +503,7 @@ module.exports = cfg => {
   cfg.h = cfg.h || 256;
   cfg.i = cfg.i || 'sveg';
   return ['svg', {
-   xmlns: 'http://www.w3.org/2000/svg',
+    xmlns: 'http://www.w3.org/2000/svg',
     width: cfg.w + 1,
     height: cfg.h + 1,
     id: cfg.i,
@@ -451,7 +524,13 @@ module.exports = {
     accel: 5,
     home: 'astroDeltaB',
     weaponsList: ['Lance'],
-    health: 5
+    health: 5,
+    icon: ['g', {},
+            ['path', {
+              d: 'M 0, 0 L  3,-3 L  0, 5 L -3,-3 Z',
+              class: 'craftIcon'
+            }]
+          ]
   }),
 
   bolt: () => ({
@@ -462,22 +541,14 @@ module.exports = {
     fuelCapacity: 50,
     fuelConsumption: 0.1,
     accel: 5,
-    home: 'astroDeltaB',
     weaponsList: ['Lance'],
-    health: 8
-  }),
-
-  swarmer: () => ({
-    class: 'Swarmer',
-    abr: 'SWM',
-    type: 'combat',
-    cargoCap: 0,
-    fuelCapacity: 50,
-    fuelConsumption: 0.1,
-    accel: 10,
-    home: 'astroDeltaB',
-    weaponsList: ['MiniLance'],
-    health: 3
+    health: 8,
+    icon: ['g', {},
+            ['path', {
+              d: 'M 0,-5 L  3,-3 L  0, 5 L -3,-3 Z',
+              class: 'craftIcon'
+            }]
+          ]
   }),
 
   spear: () => ({
@@ -488,48 +559,79 @@ module.exports = {
     fuelCapacity: 50,
     fuelConsumption: 0.1,
     accel: 5,
-    home: 'astroDeltaB',
     weaponsList: ['SuperLance', 'Lance'],
-    health: 20
+    health: 20,
+    icon: ['g', {},
+            ['path', {
+              d: 'M 0,-5 L -2,-2 L -6, 0 L -3, 2 L -2, 5 L -1, 8 L 0, 10 L 1,8 L 2, 5 L 3, 2 L 6, 0 L 2,-2 Z',
+              class: 'craftIcon'
+            }]
+          ]
   }),
+
+  noise: () => ({
+    class: 'Noise',
+    abr: 'NIS',
+    type: 'combat',
+    cargoCap: 1,
+    fuelCapacity: 50,
+    fuelConsumption: 0.1,
+    accel: 5,
+    weaponsList: [],
+    health: 20,
+    icon: ['g', {},
+            ['path', {
+              d: 'M 0, -5 L 2, -2 L 6, 0 L 2, 2 L -2, 2 L -6, 0 L -2, -2 Z',
+              class: 'craftIcon'
+            }],
+            [
+              'circle',
+              {r : 2, cx:0, cy: 2, class: 'craftIcon'}
+            ]
+          ]
+  }),
+
+  swarmer: () => ({
+    class: 'Swarmer',
+    abr: 'SWM',
+    type: 'combat',
+    cargoCap: 0,
+    fuelCapacity: 50,
+    fuelConsumption: 0.1,
+    accel: 10,
+    weaponsList: ['MiniLance'],
+    health: 3,
+    icon: ['g', {},
+            ['path', {
+              d: 'M 0,3 L 3,0 L 0,-3 L -3,0 Z',
+              class: 'craftIcon'
+            }]
+          ]
+  }),
+
+  bastion: () => ({
+    class: 'Bastion',
+    abr: 'BST',
+    type: 'combat',
+    cargoCap: 0,
+    fuelCapacity: 0,
+    fuelConsumption: 0,
+    accel: 0,
+    weaponsList: ['SuperLance'],
+    health: 100,
+    icon: ['g', {},
+            ['circle', {
+              r: 20,
+              class: 'craftIcon'
+            }]
+          ]
+  })
 };
 
 },{}],5:[function(require,module,exports){
 const tt = require('onml/tt.js');
 
 module.exports = {
-  craft: (crafto) => {
-    const icono = {
-      Arrow: 'M 0, 0 L  3,-3 L  0, 5 L -3,-3 Z',
-      Bolt:  'M 0,-5 L  3,-3 L  0, 5 L -3,-3 Z',
-      Spear: 'M 0,-5 L -2,-2 L -6, 0 L -3, 2 L -2, 5 L -1, 8 L 0, 10 L 1,8 L 2, 5 L 3, 2 L 6, 0 L 2,-2 Z'
-    };
-
-    let iconString =
-      icono[crafto.class] ?
-      icono[crafto.class] :
-      'M 0,3 L 3,0 L 0,-3 L -3,0 Z';
-
-
-
-    let drawnHull = ['g', {}];
-
-    let paint = 'craftIcon ' + crafto.team.color;
-
-    if (crafto.dead) {
-      paint = 'craftIcon ' + crafto.team.color + 'Dead';
-    }
-
-    drawnHull.push(
-      ['path', {
-        //transform: 'scale(2, 2)',
-        d: iconString,
-        class: paint
-      }]
-    );
-
-    return drawnHull;
-  },
   brackets: (iD, margin = 0, offsetY = 0) => {
     let corner = 10 + margin;
     let sides = corner - 5;
@@ -554,7 +656,22 @@ module.exports = {
       ['path', {d: 'M  '+corner+',  '+sides+' L   '+sides+',  '+corner}],
       ['path', {d: 'M -'+corner+', -'+sides+' L  -'+sides+', -'+corner}],
       ['path', {d: 'M  '+corner+', -'+sides+' L   '+sides+', -'+corner}],
-      ['path', {d: 'M -'+corner+',  '+sides+' L  -'+sides+',  '+corner}]
+      ['path', {d: 'M -'+corner+',  '+sides+' L  -'+sides+',  '+corner}],
+      // ['rect', {
+      //   x:corner,
+      //   y:corner,
+      //   height: corner*2,
+      //   width: 105,
+      //   class: 'standardBox'
+      // }],
+      ['text', {
+        x: corner,
+        y: corner+5,
+        class: 'craftIconText'
+      },
+        'CTRL+LMB to move'
+      ]
+
     ];
   },
   gridCross: (crossSize, x, y) => {
@@ -568,6 +685,15 @@ module.exports = {
         x1: x, y1: y + crossSize,
         x2: x, y2: y - crossSize,
         class: 'grid'
+      }]
+    ];
+  },
+  gridEdgeIndicator: (x, y, angle = 0) => {
+    return ['g', {},
+      ['path', {
+        transform: 'translate(' + x + ',' + y + ') rotate(' + angle + ')',
+        d: 'M 0, 20 L 5,15 L 5, 5 L -5,5 L -5,15 Z',
+        class:'grid'
       }]
     ];
   },
@@ -612,6 +738,7 @@ const renderer = require('onml/renderer.js');
 const Stats = require('stats.js');
 const advRenderer = require('./advRenderer.js');
 const hullTemps = require('./hullTemp.js');
+const wepTemps = require('./wepTemp.js');
 const drawMap = require('./drawMap.js');
 const ui = require('./ui.js');
 
@@ -625,10 +752,14 @@ const iDerGenGen  = (prefix) => {
     return prefix + '-' + id;
   };
 };
+
+const iDWepGen    = iDerGenGen('W');
+
 const craftNamer  = iDerGenGen('HULL');
 const craftIDer   = iDerGenGen('C');
-//const iDGen     = iDerGenGen();
-const iDWepGen    = iDerGenGen('W');
+
+const structNamer  = iDerGenGen('STRUCT');
+const structIDer   = iDerGenGen('S');
 
 Window.options = {
   rate: 1,
@@ -646,6 +777,7 @@ Window.options = {
 const options = Window.options;
 
 let craftList = [];
+let structList = [];
 let deadCraftList = [];
 let activeWepsList = [];
 let waypointList = [];
@@ -697,11 +829,6 @@ const teams = {
 };
 teams.player.enemy = teams.enemy;
 teams.enemy.enemy = teams.player;
-const weps = {
-  MiniLance:  {damage: 1, range: 50,  reloadTime: 0.100,  pulseTime: 0.100,  color: "wepFire0"},
-  Lance:      {damage: 2, range: 100, reloadTime: 1.000, pulseTime: 1.000, color: "wepFire1"},
-  SuperLance: {damage: 3, range: 300, reloadTime: 5.000, pulseTime: 1.000, color: "wepFire2"}
-};
 function rand(mean, deviation, prec = 0, upper = Infinity, lower = -Infinity) {
   let max = mean + deviation > upper ? upper : mean + deviation;
   let min = mean - deviation < lower ? lower : mean - deviation;
@@ -734,7 +861,6 @@ const genPoint = (spawnPoint, point = {x: 0, y: 0}) => {
   return point;
 };
 const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
-  //(crafto, name, id, owner = 'EMPIRE')
   const initWait = 10;
 
   let newCrafto = Object.assign(
@@ -749,6 +875,8 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
 
       selected: false,
       updateSelector: undefined,
+
+      mobile: true,
 
       loc: {x: 0, y: 0, z: 0},
       vec: {x: 0, y: 0, z: 0},
@@ -817,6 +945,92 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
 
   return newCrafto;
 };
+const makeStruct = (structo, name, id, mapID, loc, owner = 'player') => {
+  //(crafto, name, id, owner = 'EMPIRE')
+  const initWait = 10;
+
+  let newStructo = Object.assign(
+    structo,
+    {
+      id: owner[0] + id,
+      mapID: mapID,
+      type: 'structure',
+
+      renderer: undefined,
+      wepsRangeRenderer: undefined,
+
+      selected: false,
+      updateSelector: undefined,
+
+      mobile: false,
+
+      loc: {x: 0, y: 0, z: 0},
+      team: teams[owner],
+
+      selectorsNeedUpdating: true,
+
+      weapons: [],
+      ranges: [],
+
+      status: 'normal',
+      dead: false,
+
+      name: name,
+
+      heading: 0,
+      updateHeading: true,
+
+      owner: owner,
+      waitCycle: 0 + initWait,
+      render: false,
+      visible: true,
+
+      state: 'normal'
+    }
+  );
+
+  advRenderer.appendRend('structures', (['g', {id: mapID}]));
+  advRenderer.appendRend('wepsRanges', (['g', {id: mapID + '-WEPS-RANGE'}]));
+
+  newStructo.renderer = function () {
+    advRenderer.normRend(mapID, drawMap.drawStruct(newStructo));
+  };
+  newStructo.wepsRangeRenderer = function () {
+    advRenderer.normRend(mapID + '-WEPS-RANGE', drawMap.drawWepRanges(newStructo, mapPan));
+  };
+  newStructo.updateSelector = function () {
+    drawMap.updateSelector(newStructo);
+  };
+
+  makeWeps(newStructo);
+
+  const spawnPoint = newStructo.team.spawnPoint;
+
+
+  let point = loc;
+
+  newStructo.loc.x = point.x + spawnPoint.loc.x;
+  newStructo.loc.y = point.y + spawnPoint.loc.y;
+
+  // newStructo.heading = spawnPoint.heading;
+
+  structList.push(newStructo);
+  teams[owner].members.push(newStructo);
+
+  console.log(newStructo);
+
+  return newStructo;
+};
+const makeAStruct = (structType, loc, owner = undefined) => {
+  const baseTemplate = hullTemps[structType]();
+  const name = structNamer();
+  const id = structIDer();
+  const mapID = id + '-MID';
+
+  makeStruct(baseTemplate, name, id, mapID, loc, owner);
+
+  console.log('Made ' + name + ' (' + id + ')');
+};
 const makeManyCraft = (craftType, numberToMake, owner = undefined) => {
   for (let i = 0; i < numberToMake; i++) {
     const baseTemplate = hullTemps[craftType]();
@@ -843,7 +1057,7 @@ const makeWeps = (crafto) => {
     let wepo = {
       id: id,
       mapID: mapID,
-      ...weps[e],
+      ...wepTemps[e](),
       reloadProg: 0,
       counter: 0,
       status: 'ready',
@@ -947,6 +1161,27 @@ const killCraft = (crafto) => {
 const craftAI = (crafto, workTime) => {
   calcMotion(crafto, workTime);
 };
+const wepsUI = (unito, workTime) => {
+  return unito.weapons.find(wep => {
+    if (wep.status === 'ready' && unito.team.enemy.members.length > 0) {
+      return unito.team.enemy.members.find(enemyo => {
+        let range = calcRange(unito.loc, enemyo.loc);
+        if (
+          range < wep.range
+        ) {
+          activeWepsList.push(wep);
+          wep.target = enemyo;
+          wepsFire(wep, workTime);
+          return wep.target;
+        }
+      });
+    } else if (wep.status === 'firing') {
+      wepsFire(wep, workTime);
+    } else if (wep.status === 'reloading') {
+      wepsFire(wep, workTime);
+    }
+  });
+};
 const updateZoom = (mapPan) => {
   // Updates Zoom (WHO WHOULDA THOUGHT?)
   if (mapPan.zoomChange != 0) {
@@ -988,7 +1223,7 @@ const makeWaypoint = (cursorLoc) => {
   waypointList.push(point);
 };
 const removeWaypoint = (crafto = mapPan.selectedUnit) => {
-  if (crafto.waypoints.length > 0) {
+  if (crafto.mobile && crafto.waypoints.length > 0) {
     remove(waypointList, crafto.waypoints[0]);
     crafto.waypoints.splice(0, 1);
     hide(crafto.mapID + '-PATH');
@@ -1037,6 +1272,7 @@ const main = () => {
   };
 
   let renderGrid            = mkRndr('grid');
+  let renderGridEdge            = mkRndr('gridEdge');
   let renderGridScaleBar    = mkRndr('gridScaleBar');
   let renderScreenFrame     = mkRndr('screenFrame');
 
@@ -1048,20 +1284,24 @@ const main = () => {
   makeManyCraft('arrow', 3, 'player');
   makeManyCraft('bolt', 2, 'player');
   makeManyCraft('spear', 1, 'player');
+  makeManyCraft('noise', 1, 'player');
 
-  makeManyCraft('swarmer', 15, 'enemy');
+  // makeManyCraft('swarmer', 15, 'enemy');
 
-  function reReRenderScaleBar(options, mapPan) {
+  makeAStruct('bastion', {x: 0, y:0}, 'enemy');
+
+  const reReRenderScaleBar = (options, mapPan) => {
     renderGridScaleBar(drawMap.drawGridScaleBar(options, mapPan));
-  }
+  };
   const renderAllResizedStatics = (options, mapPan) => {
     renderGrid(drawMap.drawGrid(mapPan, options, reReRenderScaleBar));
+    renderGridEdge(drawMap.drawGridEdge(mapPan, options));
   };
 
-  craftList.forEach(crafto => {
+  [...craftList, ...structList].forEach(crafto => {
     crafto.renderer();
     crafto.wepsRangeRenderer();
-    ui.addCraftListeners(crafto, mapPan);
+    if (crafto.team !== teams.enemy) {ui.addCraftListeners(crafto, mapPan);}
   });
 
   ['player', 'enemy'].forEach(e => {
@@ -1151,32 +1391,16 @@ const main = () => {
     stats.begin(); //Stats FPS tracking
 
     if (!options.isPaused) {
-      craftList.forEach(crafto => {
-        craftAI(crafto, workTime);
+      [...craftList].forEach(unito => {
+        craftAI(unito, workTime);
+      });
 
-        return crafto.weapons.find(wep => {
-          if (wep.status === 'ready' && crafto.team.enemy.members.length > 0) {
-            return crafto.team.enemy.members.find(enemyo => {
-              let range = calcRange(crafto.loc, enemyo.loc);
-              if (
-                range < wep.range
-              ) {
-                activeWepsList.push(wep);
-                wep.target = enemyo;
-                wepsFire(wep, workTime);
-                return wep.target;
-              }
-            });
-          } else if (wep.status === 'firing') {
-            wepsFire(wep, workTime);
-          } else if (wep.status === 'reloading') {
-            wepsFire(wep, workTime);
-          }
-        });
+      [...craftList, ...structList].forEach(unito => {
+        wepsUI(unito, workTime);
       });
 
       deadCraftList.forEach(crafto => {
-        calcMotion(crafto, workTime);
+        if (crafto.mobile) {calcMotion(crafto, workTime);}
       });
     }
 
@@ -1188,7 +1412,12 @@ const main = () => {
     if (updateZoom(mapPan)) {
       mapPan.interceptUpdated = true;
       renderAllResizedStatics(options, mapPan);
-      craftList.forEach(e => {drawMap.updateWepRanges(e, mapPan);});
+      [
+        ...craftList,
+        ...structList
+      ].forEach(e => {
+        drawMap.updateWepRanges(e, mapPan);
+      });
       drawMap.updateSpawn(spawnPoints['player'], mapPan);
       drawMap.updateSpawn(spawnPoints['enemy'], mapPan);
       drawMap.updateWaypoints(waypointList, mapPan);
@@ -1197,6 +1426,7 @@ const main = () => {
 
     if (updatePan(mapPan)) {
       renderGrid(drawMap.drawGrid(mapPan, options, reReRenderScaleBar));
+      renderGridEdge(drawMap.drawGridEdge(mapPan, options));
       mapPan.someMapUpdate = true;
     }
 
@@ -1206,15 +1436,17 @@ const main = () => {
       });
 
       [
-        ...craftList
+        ...craftList,
+        ...structList
       ].forEach(e => {
         changeElementTT(e.mapID, e.loc.x * mapPan.zoom, e.loc.y * mapPan.zoom);
         if (e.selectorsNeedUpdating) {
           e.updateSelector();
           e.selectorsNeedUpdating = false;
         }
+        changeElementTT(e.mapID + '-WEPS-RANGE', e.loc.x * mapPan.zoom, e.loc.y * mapPan.zoom);
+
         if (e.type === 'craft') {
-          changeElementTT(e.mapID + '-WEPS-RANGE', e.loc.x * mapPan.zoom, e.loc.y * mapPan.zoom);
           if (e.updateHeading) {
             e.updateHeading = false;
             drawMap.updateCraft(e);
@@ -1243,7 +1475,7 @@ const main = () => {
 
 window.onload = main;
 
-},{"./advRenderer.js":1,"./drawMap.js":2,"./hullTemp.js":4,"./ui.js":12,"onml/renderer.js":8,"stats.js":11}],8:[function(require,module,exports){
+},{"./advRenderer.js":1,"./drawMap.js":2,"./hullTemp.js":4,"./ui.js":12,"./wepTemp.js":13,"onml/renderer.js":8,"stats.js":11}],8:[function(require,module,exports){
 'use strict';
 
 const stringify = require('./stringify.js');
@@ -1485,6 +1717,7 @@ exports.addCraftListeners = (crafto, mapPan) => {
     }
   });
 };
+
 exports.addListeners = (options, mapPan, renderers, functions) => {
   function pause() {
     options.isPaused = true;
@@ -1554,9 +1787,16 @@ exports.addListeners = (options, mapPan, renderers, functions) => {
   let pastOffsetX = 0;
   let pastOffsetY = 0;
 
+  //ADD PAUSE ON SPACE
+
   document.getElementById('content').addEventListener('mousedown', e => {
-    if (mapPan.preppingWaypoint && e.which === 1) {
-      if (mapPan.selectedUnit.waypoints.length > 0) {
+    if (
+      mapPan.selectedUnit &&
+      mapPan.selectedUnit.mobile &&
+      mapPan.preppingWaypoint &&
+      e.which === 1
+    ) {
+      if ( mapPan.selectedUnit.waypoints.length > 0) {
         functions.removeWaypoint();
       }
       functions.makeWaypoint({
@@ -1564,9 +1804,15 @@ exports.addListeners = (options, mapPan, renderers, functions) => {
         y: (e.offsetY - mapPan.y) / mapPan.zoom
       });
       mapPan.selectedUnit.courseChange = true;
+      mapPan.someMapUpdate = true;
+      mapPan.selectedUnit.selectorsNeedUpdating = true;
 
       // console.log(mapPan.waypointList);
-    } else if (mapPan.unitSelected && !mapPan.preppingWaypoint) {
+    } else if (
+      mapPan.unitSelected &&
+      !mapPan.preppingWaypoint &&
+      e.which !== 3
+    ) {
       mapPan.selectedUnit.selected = false;
       mapPan.someMapUpdate = true;
       mapPan.selectedUnit.selectorsNeedUpdating = true;
@@ -1579,9 +1825,8 @@ exports.addListeners = (options, mapPan, renderers, functions) => {
       pastOffsetY = e.offsetY;
       isPanning = true;
     }
-
-
   });
+
   document.getElementById('content').addEventListener('mousemove', e => {
     if (isPanning) {
       mapPan.x += e.offsetX - pastOffsetX;
@@ -1592,10 +1837,13 @@ exports.addListeners = (options, mapPan, renderers, functions) => {
     mapPan.mousePosX = e.offsetX;
     mapPan.mousePosY = e.offsetY;
   });
+
   window.addEventListener('mouseup', function () {
     isPanning = false;
   });
+
   document.getElementById('content').addEventListener('wheel', function (e) {
+    event.preventDefault();
     const zoomStep = 10**(0.05*mapPan.zoom)-1;
     mapPan.cursOriginX = e.offsetX - mapPan.x;
     mapPan.cursOriginY = e.offsetY - mapPan.y;
@@ -1605,7 +1853,32 @@ exports.addListeners = (options, mapPan, renderers, functions) => {
     if (e.deltaY > 0) {
       mapPan.zoomChange -= zoomStep;
     }
-  }, {passive: true});
+  });
+};
+
+},{}],13:[function(require,module,exports){
+module.exports = {
+
+  MiniLance: () => ({
+    damage: 1,
+    range: 50,
+    reloadTime: 0.100,
+    pulseTime: 0.100,
+    color: "wepFire0"}),
+
+  Lance: () => ({
+    damage: 2,
+    range: 100,
+    reloadTime: 1.000,
+    pulseTime: 1.000,
+    color: "wepFire1"}),
+
+  SuperLance: () => ({
+    damage: 3,
+    range: 300,
+    reloadTime: 5.000,
+    pulseTime: 1.000,
+    color: "wepFire2"}),
 };
 
 },{}]},{},[7]);

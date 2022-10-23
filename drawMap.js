@@ -25,12 +25,17 @@ exports.drawCraft = (crafto) => {
     ]]
   ];
 
+  if (crafto.icon === undefined) {
+    throw 'No drawing instructions in hellTemp for ' + crafto.class;
+  }
+
   drawnCraft.push(
     ['g', {
         transform: 'rotate(' + crafto.heading + ')',
-        id: crafto.mapID + '-ROT'
+        id: crafto.mapID + '-ROT',
+        class: crafto.dead ? crafto.team.color + 'Dead' : crafto.team.color
       },
-      icons.craft(crafto)
+      crafto.icon
     ]
   );
 
@@ -39,7 +44,8 @@ exports.drawCraft = (crafto) => {
       ['text', {
         x: 5,
         y: 5,
-        class: 'craftIconText ' + crafto.team.color +'Fill'
+        // class: 'craftIconText ' + crafto.team.color +'Fill'
+        class: 'craftIconText'
       },
         crafto.id
       ]
@@ -69,6 +75,44 @@ exports.updateCraft = (crafto) => {
     'transform', 'translate('+crafto.vec.x * 5+', '+crafto.vec.y * 5+')'
   );
 };
+exports.drawStruct = (structo) => {
+  let drawnStruct = ['g', {id: structo.id}];
+
+  if (structo.icon === undefined) {
+    throw 'No drawing instructions in hellTemp for ' + structo.class;
+  }
+
+  drawnStruct.push(
+    ['g', {
+        transform: 'rotate(' + structo.heading + ')',
+        id: structo.mapID + '-ROT',
+        class: structo.dead ? structo.team.color + 'Dead' : structo.team.color
+      },
+      structo.icon
+    ]
+  );
+
+  if (!structo.dead) {
+    drawnStruct.push(
+      ['text', {
+        x: 5,
+        y: 5,
+        class: 'craftIconText ' + structo.team.color +'Fill'
+      },
+        structo.id
+      ]
+    );
+  }
+
+  drawnStruct.push(
+    icons.bracketSelected(structo.id + '-SELECTED', 2),
+    icons.brackets(structo.id + '-SELECTOR', 4)
+  );
+
+  return drawnStruct;
+};
+
+
 exports.updateSelector = (crafto) => {
   if (crafto.selected) {
     document.getElementById(crafto.id + '-SELECTED').style.visibility = "visible";
@@ -266,8 +310,9 @@ exports.drawBoxSettings = () => {
   return box;
 };
 
-const drawGrid = (mapPan, options, reReRenderScaleBar) => {
+exports.drawGrid = (mapPan, options, reReRenderScaleBar) => {
   let grid = ['g', {}];
+
   let actualGridStep = options.gridStep * mapPan.zoom;
   if (actualGridStep < 100) {actualGridStep *= 10;}
 
@@ -288,7 +333,6 @@ const drawGrid = (mapPan, options, reReRenderScaleBar) => {
 
   return grid;
 };
-exports.drawGrid = drawGrid;
 exports.drawGridScaleBar = (options, mapPan) => {
   let actualGridStep = options.gridStep * mapPan.zoom;
   let gridStep = actualGridStep;
@@ -333,6 +377,33 @@ exports.drawGridScaleBar = (options, mapPan) => {
 
   return bar;
 };
+exports.drawGridEdge = (mapPan, options) => {
+  let grid = ['g', {}];
+
+  let actualGridStep = options.gridStep * mapPan.zoom;
+  if (actualGridStep < 100) {actualGridStep *= 10;}
+
+  let gridRectStartX = - mapPan.x + (mapPan.x) % (actualGridStep) - actualGridStep;
+  let gridRectStartY = - mapPan.y + (mapPan.y) % (actualGridStep) - actualGridStep;
+  let gridRectEndX = gridRectStartX + getPageWidth() + actualGridStep * 2;
+  let gridRectEndY = gridRectStartY + getPageHeight() + actualGridStep * 2;
+
+  for (let x = gridRectStartX; x < (gridRectEndX); x += actualGridStep) {
+    grid.push(
+      icons.gridEdgeIndicator(x, - mapPan.y),
+      icons.gridEdgeIndicator(x, getPageHeight() - mapPan.y, 180)
+    );
+  }
+
+  for (let y = gridRectStartY; y < (gridRectEndY); y += actualGridStep) {
+    grid.push(
+      icons.gridEdgeIndicator(- mapPan.x, y, -90),
+      icons.gridEdgeIndicator(getPageWidth() - mapPan.x, y, 90)
+    );
+  }
+
+  return grid;
+};
 
 exports.drawWaypoints = (waypointList, mapPan) => {
   let drawnWaypoints = ['g', {}];
@@ -369,9 +440,9 @@ exports.drawPage = () => {
   return getSvg({w:getPageWidth(), h:getPageHeight() , i:'allTheStuff'}).concat([
     ['defs'],
 
-    ['g', {id: 'gridScaleBar'}],
     ['g', {id: 'map'},
       ['g', {id: 'grid'}],
+      ['g', {id: 'gridEdge'}],
       ['g', {id: 'wepsRanges'}],
       ['g', {id: 'spawnPoints'},
         ['g', {id: 'sp-player'}],
@@ -380,8 +451,10 @@ exports.drawPage = () => {
       ['g', {id: 'craftPaths'}],
       ['g', {id: 'waypoints'}],
       ['g', {id: 'weps'}],
+      ['g', {id: 'structures'}],
       ['g', {id: 'crafts'}]
     ],
+    ['g', {id: 'gridScaleBar'}],
     ['g', {id: 'screenFrame'}],
     ['g', {id: 'boxes'},
       ['g', {id: 'boxMainSettings'}]
