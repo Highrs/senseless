@@ -146,7 +146,6 @@ exports.drawStruct = (structo) => {
   return drawnStruct;
 };
 
-
 exports.updateSelector = (crafto) => {
   if (crafto.selected) {
     document.getElementById(crafto.id + '-SELECTED').style.visibility = "visible";
@@ -344,9 +343,7 @@ exports.drawBoxSettings = () => {
   return box;
 };
 
-exports.drawGrid = (mapPan, options, reReRenderScaleBar) => {
-  let grid = ['g', {}];
-
+const gridGeoCalc = (mapPan, options) => {
   let actualGridStep = options.gridStep * mapPan.zoom;
   if (actualGridStep < 100) {actualGridStep *= 10;}
 
@@ -355,8 +352,21 @@ exports.drawGrid = (mapPan, options, reReRenderScaleBar) => {
   let gridRectEndX = gridRectStartX + getPageWidth() + actualGridStep * 2;
   let gridRectEndY = gridRectStartY + getPageHeight() + actualGridStep * 2;
 
-  for (let x = gridRectStartX; x < (gridRectEndX); x += actualGridStep) {
-    for (let y = gridRectStartY; y < (gridRectEndY); y += actualGridStep) {
+  return {
+    gridRectStartX: gridRectStartX,
+    gridRectStartY: gridRectStartY,
+    gridRectEndX: gridRectEndX,
+    gridRectEndY: gridRectEndY,
+    actualGridStep: actualGridStep
+  };
+};
+exports.drawGrid = (mapPan, options, reReRenderScaleBar) => {
+  let grid = ['g', {}];
+
+  const gridGeo = gridGeoCalc(mapPan, options);
+
+  for (let x = gridGeo.gridRectStartX; x < (gridGeo.gridRectEndX); x += gridGeo.actualGridStep) {
+    for (let y = gridGeo.gridRectStartY; y < (gridGeo.gridRectEndY); y += gridGeo.actualGridStep) {
       grid.push(
         icons.gridCross(options.gridCrossSize,  x,  y)
       );
@@ -412,31 +422,25 @@ exports.drawGridScaleBar = (options, mapPan) => {
   return bar;
 };
 exports.drawGridEdge = (mapPan, options) => {
-  let grid = ['g', {}];
+  let gridFrame = ['g', {}];
 
-  let actualGridStep = options.gridStep * mapPan.zoom;
-  if (actualGridStep < 100) {actualGridStep *= 10;}
+  const gridGeo = gridGeoCalc(mapPan, options);
 
-  let gridRectStartX = - mapPan.x + (mapPan.x) % (actualGridStep) - actualGridStep;
-  let gridRectStartY = - mapPan.y + (mapPan.y) % (actualGridStep) - actualGridStep;
-  let gridRectEndX = gridRectStartX + getPageWidth() + actualGridStep * 2;
-  let gridRectEndY = gridRectStartY + getPageHeight() + actualGridStep * 2;
-
-  for (let x = gridRectStartX; x < (gridRectEndX); x += actualGridStep) {
-    grid.push(
+  for (let x = gridGeo.gridRectStartX; x < (gridGeo.gridRectEndX); x += gridGeo.actualGridStep) {
+    gridFrame.push(
       icons.gridEdgeIndicator(x, - mapPan.y),
       icons.gridEdgeIndicator(x, getPageHeight() - mapPan.y, 180)
     );
   }
 
-  for (let y = gridRectStartY; y < (gridRectEndY); y += actualGridStep) {
-    grid.push(
+  for (let y = gridGeo.gridRectStartY; y < (gridGeo.gridRectEndY); y += gridGeo.actualGridStep) {
+    gridFrame.push(
       icons.gridEdgeIndicator(- mapPan.x, y, -90),
       icons.gridEdgeIndicator(getPageWidth() - mapPan.x, y, 90)
     );
   }
 
-  return grid;
+  return gridFrame;
 };
 
 exports.drawWaypoints = (waypointList, mapPan) => {
@@ -523,8 +527,14 @@ module.exports = {
     fuelConsumption: 0.1,
     accel: 5,
     home: 'astroDeltaB',
-    weaponsList: ['Lance'],
     health: 5,
+    weaponsHardpoints: [
+      {
+        size: 2,
+        hx: 0,
+        hy: 0
+      }
+    ],
     icon: ['g', {},
             ['path', {
               d: 'M 0, 0 L  3,-3 L  0, 5 L -3,-3 Z',
@@ -541,8 +551,14 @@ module.exports = {
     fuelCapacity: 50,
     fuelConsumption: 0.1,
     accel: 5,
-    weaponsList: ['Lance'],
     health: 8,
+    weaponsHardpoints: [
+      {
+        size: 2,
+        hx: 0,
+        hy: 0
+      }
+    ],
     icon: ['g', {},
             ['path', {
               d: 'M 0,-5 L  3,-3 L  0, 5 L -3,-3 Z',
@@ -559,8 +575,19 @@ module.exports = {
     fuelCapacity: 50,
     fuelConsumption: 0.1,
     accel: 5,
-    weaponsList: ['SuperLance', 'Lance'],
     health: 20,
+    weaponsHardpoints: [
+      {
+        size: 2,
+        hx: 5,
+        hy: 0
+      },
+      {
+        size: 3,
+        hx: 0,
+        hy: 0
+      }
+    ],
     icon: ['g', {},
             ['path', {
               d: 'M 0,-5 L -2,-2 L -6, 0 L -3, 2 L -2, 5 L -1, 8 L 0, 10 L 1,8 L 2, 5 L 3, 2 L 6, 0 L 2,-2 Z',
@@ -577,8 +604,8 @@ module.exports = {
     fuelCapacity: 50,
     fuelConsumption: 0.1,
     accel: 5,
-    weaponsList: [],
-    health: 20,
+    health: 5,
+    weaponsHardpoints: [],
     icon: ['g', {},
             ['path', {
               d: 'M 0, -5 L 2, -2 L 6, 0 L 2, 2 L -2, 2 L -6, 0 L -2, -2 Z',
@@ -599,8 +626,14 @@ module.exports = {
     fuelCapacity: 50,
     fuelConsumption: 0.1,
     accel: 10,
-    weaponsList: ['MiniLance'],
     health: 3,
+    weaponsHardpoints: [
+      {
+        size: 1,
+        hx: 0,
+        hy: 0
+      }
+    ],
     icon: ['g', {},
             ['path', {
               d: 'M 0,3 L 3,0 L 0,-3 L -3,0 Z',
@@ -617,8 +650,14 @@ module.exports = {
     fuelCapacity: 0,
     fuelConsumption: 0,
     accel: 0,
-    weaponsList: ['SuperLance'],
     health: 100,
+    weaponsHardpoints: [
+      {
+        size: 3,
+        hx: 0,
+        hy: 0
+      }
+    ],
     icon: ['g', {},
             ['circle', {
               r: 20,
@@ -734,13 +773,13 @@ module.exports = {
 
 },{}],7:[function(require,module,exports){
 'use strict';
-const renderer = require('onml/renderer.js');
-const Stats = require('stats.js');
+const renderer    = require('onml/renderer.js');
+const Stats       = require('stats.js');
 const advRenderer = require('./advRenderer.js');
-const hullTemps = require('./hullTemp.js');
-const wepTemps = require('./wepTemp.js');
-const drawMap = require('./drawMap.js');
-const ui = require('./ui.js');
+const hullTemps   = require('./hullTemp.js');
+const wepTemps    = require('./wepTemp.js');
+const drawMap     = require('./drawMap.js');
+const ui          = require('./ui.js');
 
 function getPageWidth() {return document.body.clientWidth;}
 function getPageHeight() {return document.body.clientHeight;}
@@ -860,7 +899,8 @@ const genPoint = (spawnPoint, point = {x: 0, y: 0}) => {
 
   return point;
 };
-const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
+const makeCraft = (crafto, name, id, mapID, owner = 'player', kit) => {
+  //kit = {0: 'Lance', ammo: {}}
   const initWait = 10;
 
   let newCrafto = Object.assign(
@@ -928,7 +968,7 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
     drawMap.updateSelector(newCrafto);
   };
 
-  makeWeps(newCrafto);
+  makeWeps(newCrafto, kit);
 
   const spawnPoint = newCrafto.team.spawnPoint;
 
@@ -943,9 +983,11 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
   craftList.push(newCrafto);
   teams[owner].members.push(newCrafto);
 
+  console.log(newCrafto);
+
   return newCrafto;
 };
-const makeStruct = (structo, name, id, mapID, loc, owner = 'player') => {
+const makeStruct = (structo, name, id, mapID, loc, owner = 'player', kit) => {
   //(crafto, name, id, owner = 'EMPIRE')
   const initWait = 10;
 
@@ -1002,7 +1044,7 @@ const makeStruct = (structo, name, id, mapID, loc, owner = 'player') => {
     drawMap.updateSelector(newStructo);
   };
 
-  makeWeps(newStructo);
+  makeWeps(newStructo, kit);
 
   const spawnPoint = newStructo.team.spawnPoint;
 
@@ -1021,24 +1063,24 @@ const makeStruct = (structo, name, id, mapID, loc, owner = 'player') => {
 
   return newStructo;
 };
-const makeAStruct = (structType, loc, owner = undefined) => {
+const makeAStruct = (structType, loc, owner = undefined, kit) => {
   const baseTemplate = hullTemps[structType]();
   const name = structNamer();
   const id = structIDer();
   const mapID = id + '-MID';
 
-  makeStruct(baseTemplate, name, id, mapID, loc, owner);
+  makeStruct(baseTemplate, name, id, mapID, loc, owner, kit);
 
   console.log('Made ' + name + ' (' + id + ')');
 };
-const makeManyCraft = (craftType, numberToMake, owner = undefined) => {
+const makeManyCraft = (craftType, numberToMake, owner = undefined, kit) => {
   for (let i = 0; i < numberToMake; i++) {
     const baseTemplate = hullTemps[craftType]();
     const name = craftNamer();
     const id = craftIDer();
     const mapID = id + '-MID';
 
-    makeCraft(baseTemplate, name, id, mapID, owner);
+    makeCraft(baseTemplate, name, id, mapID, owner, kit);
 
     console.log('Made ' + name + ' (' + id + ')');
   }
@@ -1050,34 +1092,42 @@ const wepsRangeInCraftoRanges = (crafto, wepo) => {
     }
   });
 };
-const makeWeps = (crafto) => {
-  crafto.weaponsList.forEach(e => {
-    let id = iDWepGen();
-    let mapID = id;
-    let wepo = {
-      id: id,
-      mapID: mapID,
-      ...wepTemps[e](),
-      reloadProg: 0,
-      counter: 0,
-      status: 'ready',
-      pulseProg: 0,
-      renderer: undefined,
-      host: crafto,
-      target: {},
-    };
+const makeWeps = (crafto, kit) => {
+  //{0: 'SuperLance', 1:'Lance'}
+  crafto.weaponsHardpoints.forEach((socket, idx) => {
+    if (!kit[idx]) {
+      socket.empty = true;
+    } else {
+      let id = iDWepGen();
+      let mapID = id;
 
-    if (!wepsRangeInCraftoRanges(crafto, wepo)) {
-      crafto.ranges.push(wepo.range);
+      let wepo = {
+        ...socket,
+        id: id,
+        mapID: mapID,
+        ...wepTemps[kit[idx]](),
+        reloadProg: 0,
+        counter: 0,
+        status: 'ready',
+        pulseProg: 0,
+        renderer: undefined,
+        host: crafto,
+        target: {},
+        empty: false
+      };
+
+      if (!wepsRangeInCraftoRanges(crafto, wepo)) {
+        crafto.ranges.push(wepo.range);
+      }
+
+      advRenderer.appendRend('weps', (['g', {id: mapID}]));
+      wepo.renderer = function () {
+        advRenderer.normRend(mapID, drawMap.drawWep(wepo));
+      };
+      wepo.renderer();
+      hide(wepo.mapID);
+      crafto.weapons.push(wepo);
     }
-
-    advRenderer.appendRend('weps', (['g', {id: mapID}]));
-    wepo.renderer = function () {
-      advRenderer.normRend(mapID, drawMap.drawWep(wepo));
-    };
-    wepo.renderer();
-    hide(wepo.mapID);
-    crafto.weapons.push(wepo);
   });
 };
 const changeElementTT = (id, x, y) => {
@@ -1094,8 +1144,16 @@ const updateWepLine = (wep) => {
   let enemyo = wep.target;
   let crafto = wep.host;
   let wepLine = document.getElementById(wep.mapID + '-LINE');
-  wepLine.setAttribute('x1', crafto.loc.x * mapPan.zoom);
-  wepLine.setAttribute('y1', crafto.loc.y * mapPan.zoom);
+
+  let wepOffset = {};
+  let radians = (Math.PI / 180) * (-crafto.heading),
+    cos = Math.cos(radians),
+    sin = Math.sin(radians);
+  wepOffset.x = (cos * wep.hx) + (sin * wep.hy);
+  wepOffset.y = (cos * wep.hy) - (sin * wep.hx);
+
+  wepLine.setAttribute('x1', crafto.loc.x * mapPan.zoom + wepOffset.x);
+  wepLine.setAttribute('y1', crafto.loc.y * mapPan.zoom + wepOffset.y);
   wepLine.setAttribute('x2', enemyo.loc.x * mapPan.zoom);
   wepLine.setAttribute('y2', enemyo.loc.y * mapPan.zoom);
 };
@@ -1185,8 +1243,8 @@ const wepsUI = (unito, workTime) => {
 const updateZoom = (mapPan) => {
   // Updates Zoom (WHO WHOULDA THOUGHT?)
   if (mapPan.zoomChange != 0) {
-    if (mapPan.zoom + mapPan.zoomChange < 0.5) {
-      mapPan.zoom = 1;
+    if (mapPan.zoom + mapPan.zoomChange < 0.8) {
+      mapPan.zoom = 0.8;
     } else if (mapPan.zoom + mapPan.zoomChange > 20) {
       mapPan.zoom = 20;
     } else {
@@ -1281,14 +1339,14 @@ const main = () => {
   let renderBoxSettings     = mkRndr('boxMainSettings');
   let renderWaypoints       = mkRndr('waypoints');
 
-  makeManyCraft('arrow', 3, 'player');
-  makeManyCraft('bolt', 2, 'player');
-  makeManyCraft('spear', 1, 'player');
-  makeManyCraft('noise', 1, 'player');
+  makeManyCraft('arrow', 3, 'player', {0: 'Lance'});
+  makeManyCraft('bolt', 2, 'player', {0: 'Lance'});
+  makeManyCraft('spear', 1, 'player', {0: 'SuperLance', 1:'Lance'});
+  makeManyCraft('noise', 1, 'player', {});
 
   // makeManyCraft('swarmer', 15, 'enemy');
 
-  makeAStruct('bastion', {x: 0, y:0}, 'enemy');
+  makeAStruct('bastion', {x: 0, y:0}, 'enemy', {0: 'SuperLance'});
 
   const reReRenderScaleBar = (options, mapPan) => {
     renderGridScaleBar(drawMap.drawGridScaleBar(options, mapPan));
@@ -1853,32 +1911,34 @@ exports.addListeners = (options, mapPan, renderers, functions) => {
     if (e.deltaY > 0) {
       mapPan.zoomChange -= zoomStep;
     }
-  });
+  }, {passive: false});
 };
 
 },{}],13:[function(require,module,exports){
 module.exports = {
-
   MiniLance: () => ({
     damage: 1,
     range: 50,
     reloadTime: 0.100,
     pulseTime: 0.100,
-    color: "wepFire0"}),
+    color: "wepFire0"
+  }),
 
   Lance: () => ({
     damage: 2,
     range: 100,
     reloadTime: 1.000,
     pulseTime: 1.000,
-    color: "wepFire1"}),
+    color: "wepFire1"
+  }),
 
   SuperLance: () => ({
     damage: 3,
     range: 300,
     reloadTime: 5.000,
     pulseTime: 1.000,
-    color: "wepFire2"}),
+    color: "wepFire2"
+  }),
 };
 
 },{}]},{},[7]);

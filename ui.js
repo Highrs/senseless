@@ -237,5 +237,5 @@ exports.addListeners = (options, mapPan, renderers, functions) => {
     if (e.deltaY > 0) {
       mapPan.zoomChange -= zoomStep;
     }
-  });
+  }, {passive: false});
 };

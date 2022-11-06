@@ -1,11 +1,11 @@
 'use strict';
-const renderer = require('onml/renderer.js');
-const Stats = require('stats.js');
+const renderer    = require('onml/renderer.js');
+const Stats       = require('stats.js');
 const advRenderer = require('./advRenderer.js');
-const hullTemps = require('./hullTemp.js');
-const wepTemps = require('./wepTemp.js');
-const drawMap = require('./drawMap.js');
-const ui = require('./ui.js');
+const hullTemps   = require('./hullTemp.js');
+const wepTemps    = require('./wepTemp.js');
+const drawMap     = require('./drawMap.js');
+const ui          = require('./ui.js');
 
 function getPageWidth() {return document.body.clientWidth;}
 function getPageHeight() {return document.body.clientHeight;}
@@ -125,7 +125,8 @@ const genPoint = (spawnPoint, point = {x: 0, y: 0}) => {
 
   return point;
 };
-const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
+const makeCraft = (crafto, name, id, mapID, owner = 'player', kit) => {
+  //kit = {0: 'Lance', ammo: {}}
   const initWait = 10;
 
   let newCrafto = Object.assign(
@@ -193,7 +194,7 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
     drawMap.updateSelector(newCrafto);
   };
 
-  makeWeps(newCrafto);
+  makeWeps(newCrafto, kit);
 
   const spawnPoint = newCrafto.team.spawnPoint;
 
@@ -208,9 +209,11 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player') => {
   craftList.push(newCrafto);
   teams[owner].members.push(newCrafto);
 
+  console.log(newCrafto);
+
   return newCrafto;
 };
-const makeStruct = (structo, name, id, mapID, loc, owner = 'player') => {
+const makeStruct = (structo, name, id, mapID, loc, owner = 'player', kit) => {
   //(crafto, name, id, owner = 'EMPIRE')
   const initWait = 10;
 
@@ -267,7 +270,7 @@ const makeStruct = (structo, name, id, mapID, loc, owner = 'player') => {
     drawMap.updateSelector(newStructo);
   };
 
-  makeWeps(newStructo);
+  makeWeps(newStructo, kit);
 
   const spawnPoint = newStructo.team.spawnPoint;
 
@@ -286,24 +289,24 @@ const makeStruct = (structo, name, id, mapID, loc, owner = 'player') => {
 
   return newStructo;
 };
-const makeAStruct = (structType, loc, owner = undefined) => {
+const makeAStruct = (structType, loc, owner = undefined, kit) => {
   const baseTemplate = hullTemps[structType]();
   const name = structNamer();
   const id = structIDer();
   const mapID = id + '-MID';
 
-  makeStruct(baseTemplate, name, id, mapID, loc, owner);
+  makeStruct(baseTemplate, name, id, mapID, loc, owner, kit);
 
   console.log('Made ' + name + ' (' + id + ')');
 };
-const makeManyCraft = (craftType, numberToMake, owner = undefined) => {
+const makeManyCraft = (craftType, numberToMake, owner = undefined, kit) => {
   for (let i = 0; i < numberToMake; i++) {
     const baseTemplate = hullTemps[craftType]();
     const name = craftNamer();
     const id = craftIDer();
     const mapID = id + '-MID';
 
-    makeCraft(baseTemplate, name, id, mapID, owner);
+    makeCraft(baseTemplate, name, id, mapID, owner, kit);
 
     console.log('Made ' + name + ' (' + id + ')');
   }
@@ -315,34 +318,42 @@ const wepsRangeInCraftoRanges = (crafto, wepo) => {
     }
   });
 };
-const makeWeps = (crafto) => {
-  crafto.weaponsList.forEach(e => {
-    let id = iDWepGen();
-    let mapID = id;
-    let wepo = {
-      id: id,
-      mapID: mapID,
-      ...wepTemps[e](),
-      reloadProg: 0,
-      counter: 0,
-      status: 'ready',
-      pulseProg: 0,
-      renderer: undefined,
-      host: crafto,
-      target: {},
-    };
+const makeWeps = (crafto, kit) => {
+  //{0: 'SuperLance', 1:'Lance'}
+  crafto.weaponsHardpoints.forEach((socket, idx) => {
+    if (!kit[idx]) {
+      socket.empty = true;
+    } else {
+      let id = iDWepGen();
+      let mapID = id;
 
-    if (!wepsRangeInCraftoRanges(crafto, wepo)) {
-      crafto.ranges.push(wepo.range);
+      let wepo = {
+        ...socket,
+        id: id,
+        mapID: mapID,
+        ...wepTemps[kit[idx]](),
+        reloadProg: 0,
+        counter: 0,
+        status: 'ready',
+        pulseProg: 0,
+        renderer: undefined,
+        host: crafto,
+        target: {},
+        empty: false
+      };
+
+      if (!wepsRangeInCraftoRanges(crafto, wepo)) {
+        crafto.ranges.push(wepo.range);
+      }
+
+      advRenderer.appendRend('weps', (['g', {id: mapID}]));
+      wepo.renderer = function () {
+        advRenderer.normRend(mapID, drawMap.drawWep(wepo));
+      };
+      wepo.renderer();
+      hide(wepo.mapID);
+      crafto.weapons.push(wepo);
     }
-
-    advRenderer.appendRend('weps', (['g', {id: mapID}]));
-    wepo.renderer = function () {
-      advRenderer.normRend(mapID, drawMap.drawWep(wepo));
-    };
-    wepo.renderer();
-    hide(wepo.mapID);
-    crafto.weapons.push(wepo);
   });
 };
 const changeElementTT = (id, x, y) => {
@@ -359,8 +370,16 @@ const updateWepLine = (wep) => {
   let enemyo = wep.target;
   let crafto = wep.host;
   let wepLine = document.getElementById(wep.mapID + '-LINE');
-  wepLine.setAttribute('x1', crafto.loc.x * mapPan.zoom);
-  wepLine.setAttribute('y1', crafto.loc.y * mapPan.zoom);
+
+  let wepOffset = {};
+  let radians = (Math.PI / 180) * (-crafto.heading),
+    cos = Math.cos(radians),
+    sin = Math.sin(radians);
+  wepOffset.x = (cos * wep.hx) + (sin * wep.hy);
+  wepOffset.y = (cos * wep.hy) - (sin * wep.hx);
+
+  wepLine.setAttribute('x1', crafto.loc.x * mapPan.zoom + wepOffset.x);
+  wepLine.setAttribute('y1', crafto.loc.y * mapPan.zoom + wepOffset.y);
   wepLine.setAttribute('x2', enemyo.loc.x * mapPan.zoom);
   wepLine.setAttribute('y2', enemyo.loc.y * mapPan.zoom);
 };
@@ -450,8 +469,8 @@ const wepsUI = (unito, workTime) => {
 const updateZoom = (mapPan) => {
   // Updates Zoom (WHO WHOULDA THOUGHT?)
   if (mapPan.zoomChange != 0) {
-    if (mapPan.zoom + mapPan.zoomChange < 0.5) {
-      mapPan.zoom = 1;
+    if (mapPan.zoom + mapPan.zoomChange < 0.8) {
+      mapPan.zoom = 0.8;
     } else if (mapPan.zoom + mapPan.zoomChange > 20) {
       mapPan.zoom = 20;
     } else {
@@ -546,14 +565,14 @@ const main = () => {
   let renderBoxSettings     = mkRndr('boxMainSettings');
   let renderWaypoints       = mkRndr('waypoints');
 
-  makeManyCraft('arrow', 3, 'player');
-  makeManyCraft('bolt', 2, 'player');
-  makeManyCraft('spear', 1, 'player');
-  makeManyCraft('noise', 1, 'player');
+  makeManyCraft('arrow', 3, 'player', {0: 'Lance'});
+  makeManyCraft('bolt', 2, 'player', {0: 'Lance'});
+  makeManyCraft('spear', 1, 'player', {0: 'SuperLance', 1:'Lance'});
+  makeManyCraft('noise', 1, 'player', {});
 
   // makeManyCraft('swarmer', 15, 'enemy');
 
-  makeAStruct('bastion', {x: 0, y:0}, 'enemy');
+  makeAStruct('bastion', {x: 0, y:0}, 'enemy', {0: 'SuperLance'});
 
   const reReRenderScaleBar = (options, mapPan) => {
     renderGridScaleBar(drawMap.drawGridScaleBar(options, mapPan));

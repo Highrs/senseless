@@ -64,7 +64,7 @@ playerhtml, body {
   user-select: none;
 }
 .enemyFill {
-  fill: #ff3c3c;
+  fill: #ff0000;
 }
 .playerFill {
   fill: #00ff66;

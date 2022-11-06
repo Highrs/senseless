@@ -8,8 +8,14 @@ module.exports = {
     fuelConsumption: 0.1,
     accel: 5,
     home: 'astroDeltaB',
-    weaponsList: ['Lance'],
     health: 5,
+    weaponsHardpoints: [
+      {
+        size: 2,
+        hx: 0,
+        hy: 0
+      }
+    ],
     icon: ['g', {},
             ['path', {
               d: 'M 0, 0 L  3,-3 L  0, 5 L -3,-3 Z',
@@ -26,8 +32,14 @@ module.exports = {
     fuelCapacity: 50,
     fuelConsumption: 0.1,
     accel: 5,
-    weaponsList: ['Lance'],
     health: 8,
+    weaponsHardpoints: [
+      {
+        size: 2,
+        hx: 0,
+        hy: 0
+      }
+    ],
     icon: ['g', {},
             ['path', {
               d: 'M 0,-5 L  3,-3 L  0, 5 L -3,-3 Z',
@@ -44,8 +56,19 @@ module.exports = {
     fuelCapacity: 50,
     fuelConsumption: 0.1,
     accel: 5,
-    weaponsList: ['SuperLance', 'Lance'],
     health: 20,
+    weaponsHardpoints: [
+      {
+        size: 2,
+        hx: 5,
+        hy: 0
+      },
+      {
+        size: 3,
+        hx: 0,
+        hy: 0
+      }
+    ],
     icon: ['g', {},
             ['path', {
               d: 'M 0,-5 L -2,-2 L -6, 0 L -3, 2 L -2, 5 L -1, 8 L 0, 10 L 1,8 L 2, 5 L 3, 2 L 6, 0 L 2,-2 Z',
@@ -62,8 +85,8 @@ module.exports = {
     fuelCapacity: 50,
     fuelConsumption: 0.1,
     accel: 5,
-    weaponsList: [],
-    health: 20,
+    health: 5,
+    weaponsHardpoints: [],
     icon: ['g', {},
             ['path', {
               d: 'M 0, -5 L 2, -2 L 6, 0 L 2, 2 L -2, 2 L -6, 0 L -2, -2 Z',
@@ -84,8 +107,14 @@ module.exports = {
     fuelCapacity: 50,
     fuelConsumption: 0.1,
     accel: 10,
-    weaponsList: ['MiniLance'],
     health: 3,
+    weaponsHardpoints: [
+      {
+        size: 1,
+        hx: 0,
+        hy: 0
+      }
+    ],
     icon: ['g', {},
             ['path', {
               d: 'M 0,3 L 3,0 L 0,-3 L -3,0 Z',
@@ -102,8 +131,14 @@ module.exports = {
     fuelCapacity: 0,
     fuelConsumption: 0,
     accel: 0,
-    weaponsList: ['SuperLance'],
     health: 100,
+    weaponsHardpoints: [
+      {
+        size: 3,
+        hx: 0,
+        hy: 0
+      }
+    ],
     icon: ['g', {},
             ['circle', {
               r: 20,

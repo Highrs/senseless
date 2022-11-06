@@ -112,7 +112,6 @@ exports.drawStruct = (structo) => {
   return drawnStruct;
 };
 
-
 exports.updateSelector = (crafto) => {
   if (crafto.selected) {
     document.getElementById(crafto.id + '-SELECTED').style.visibility = "visible";
@@ -310,9 +309,7 @@ exports.drawBoxSettings = () => {
   return box;
 };
 
-exports.drawGrid = (mapPan, options, reReRenderScaleBar) => {
-  let grid = ['g', {}];
-
+const gridGeoCalc = (mapPan, options) => {
   let actualGridStep = options.gridStep * mapPan.zoom;
   if (actualGridStep < 100) {actualGridStep *= 10;}
 
@@ -321,8 +318,21 @@ exports.drawGrid = (mapPan, options, reReRenderScaleBar) => {
   let gridRectEndX = gridRectStartX + getPageWidth() + actualGridStep * 2;
   let gridRectEndY = gridRectStartY + getPageHeight() + actualGridStep * 2;
 
-  for (let x = gridRectStartX; x < (gridRectEndX); x += actualGridStep) {
-    for (let y = gridRectStartY; y < (gridRectEndY); y += actualGridStep) {
+  return {
+    gridRectStartX: gridRectStartX,
+    gridRectStartY: gridRectStartY,
+    gridRectEndX: gridRectEndX,
+    gridRectEndY: gridRectEndY,
+    actualGridStep: actualGridStep
+  };
+};
+exports.drawGrid = (mapPan, options, reReRenderScaleBar) => {
+  let grid = ['g', {}];
+
+  const gridGeo = gridGeoCalc(mapPan, options);
+
+  for (let x = gridGeo.gridRectStartX; x < (gridGeo.gridRectEndX); x += gridGeo.actualGridStep) {
+    for (let y = gridGeo.gridRectStartY; y < (gridGeo.gridRectEndY); y += gridGeo.actualGridStep) {
       grid.push(
         icons.gridCross(options.gridCrossSize,  x,  y)
       );
@@ -378,31 +388,25 @@ exports.drawGridScaleBar = (options, mapPan) => {
   return bar;
 };
 exports.drawGridEdge = (mapPan, options) => {
-  let grid = ['g', {}];
+  let gridFrame = ['g', {}];
 
-  let actualGridStep = options.gridStep * mapPan.zoom;
-  if (actualGridStep < 100) {actualGridStep *= 10;}
+  const gridGeo = gridGeoCalc(mapPan, options);
 
-  let gridRectStartX = - mapPan.x + (mapPan.x) % (actualGridStep) - actualGridStep;
-  let gridRectStartY = - mapPan.y + (mapPan.y) % (actualGridStep) - actualGridStep;
-  let gridRectEndX = gridRectStartX + getPageWidth() + actualGridStep * 2;
-  let gridRectEndY = gridRectStartY + getPageHeight() + actualGridStep * 2;
-
-  for (let x = gridRectStartX; x < (gridRectEndX); x += actualGridStep) {
-    grid.push(
+  for (let x = gridGeo.gridRectStartX; x < (gridGeo.gridRectEndX); x += gridGeo.actualGridStep) {
+    gridFrame.push(
       icons.gridEdgeIndicator(x, - mapPan.y),
       icons.gridEdgeIndicator(x, getPageHeight() - mapPan.y, 180)
     );
   }
 
-  for (let y = gridRectStartY; y < (gridRectEndY); y += actualGridStep) {
-    grid.push(
+  for (let y = gridGeo.gridRectStartY; y < (gridGeo.gridRectEndY); y += gridGeo.actualGridStep) {
+    gridFrame.push(
       icons.gridEdgeIndicator(- mapPan.x, y, -90),
       icons.gridEdgeIndicator(getPageWidth() - mapPan.x, y, 90)
     );
   }
 
-  return grid;
+  return gridFrame;
 };
 
 exports.drawWaypoints = (waypointList, mapPan) => {
