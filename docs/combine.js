@@ -59,10 +59,6 @@ exports.drawCraft = (crafto) => {
     ]]
   ];
 
-  if (crafto.icon === undefined) {
-    throw 'No drawing instructions in hellTemp for ' + crafto.class;
-  }
-
   drawnCraft.push(
     ['g', {
         transform: 'rotate(' + crafto.heading + ')',
@@ -579,8 +575,8 @@ module.exports = {
     weaponsHardpoints: [
       {
         size: 2,
-        hx: 5,
-        hy: 0
+        hx: 0,
+        hy: 5
       },
       {
         size: 3,
@@ -1330,7 +1326,7 @@ const main = () => {
   };
 
   let renderGrid            = mkRndr('grid');
-  let renderGridEdge            = mkRndr('gridEdge');
+  let renderGridEdge        = mkRndr('gridEdge');
   let renderGridScaleBar    = mkRndr('gridScaleBar');
   let renderScreenFrame     = mkRndr('screenFrame');
 
@@ -1341,7 +1337,7 @@ const main = () => {
 
   makeManyCraft('arrow', 3, 'player', {0: 'Lance'});
   makeManyCraft('bolt', 2, 'player', {0: 'Lance'});
-  makeManyCraft('spear', 1, 'player', {0: 'SuperLance', 1:'Lance'});
+  makeManyCraft('spear', 1, 'player', {0: 'Lance', 1:'SuperLance'});
   makeManyCraft('noise', 1, 'player', {});
 
   // makeManyCraft('swarmer', 15, 'enemy');
@@ -1936,7 +1932,7 @@ module.exports = {
     damage: 3,
     range: 300,
     reloadTime: 5.000,
-    pulseTime: 1.000,
+    pulseTime: 100.000,
     color: "wepFire2"
   }),
 };

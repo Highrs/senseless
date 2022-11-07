@@ -25,10 +25,6 @@ exports.drawCraft = (crafto) => {
     ]]
   ];
 
-  if (crafto.icon === undefined) {
-    throw 'No drawing instructions in hellTemp for ' + crafto.class;
-  }
-
   drawnCraft.push(
     ['g', {
         transform: 'rotate(' + crafto.heading + ')',

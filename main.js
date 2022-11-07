@@ -556,7 +556,7 @@ const main = () => {
   };
 
   let renderGrid            = mkRndr('grid');
-  let renderGridEdge            = mkRndr('gridEdge');
+  let renderGridEdge        = mkRndr('gridEdge');
   let renderGridScaleBar    = mkRndr('gridScaleBar');
   let renderScreenFrame     = mkRndr('screenFrame');
 
@@ -567,7 +567,7 @@ const main = () => {
 
   makeManyCraft('arrow', 3, 'player', {0: 'Lance'});
   makeManyCraft('bolt', 2, 'player', {0: 'Lance'});
-  makeManyCraft('spear', 1, 'player', {0: 'SuperLance', 1:'Lance'});
+  makeManyCraft('spear', 1, 'player', {0: 'Lance', 1:'SuperLance'});
   makeManyCraft('noise', 1, 'player', {});
 
   // makeManyCraft('swarmer', 15, 'enemy');

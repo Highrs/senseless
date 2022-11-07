@@ -19,7 +19,7 @@ module.exports = {
     damage: 3,
     range: 300,
     reloadTime: 5.000,
-    pulseTime: 1.000,
+    pulseTime: 100.000,
     color: "wepFire2"
   }),
 };

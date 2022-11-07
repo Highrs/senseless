@@ -60,8 +60,8 @@ module.exports = {
     weaponsHardpoints: [
       {
         size: 2,
-        hx: 5,
-        hy: 0
+        hx: 0,
+        hy: 5
       },
       {
         size: 3,
