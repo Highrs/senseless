@@ -1,27 +1,56 @@
 'use strict';
 
+let allowed = true;
+
+function pause(options) {
+  options.isPaused = true;
+  options.rateSetting === 0 ? options.savedSimRate = 1 : options.savedSimRate = options.rateSetting;
+  options.rateSetting = 0;
+  document.getElementById('pausedSign').style.visibility = "visible";
+  console.log('|| Paused');
+}
+
+function play(options) {
+  allowed = true;
+  options.isPaused = false;
+  options.savedSimRate > 0 ? options.rateSetting = options.savedSimRate : options.rateSetting = 1;
+  document.getElementById('pausedSign').style.visibility = "hidden";
+  console.log('>> Unpaused');
+}
+
 const addRateListeners = (options, updateRateCounter) => {
   document.getElementById('buttonStop').addEventListener('click', function () {
-    options.rateSetting = 0;
-    options.rate = options.simRates[options.rateSetting];
-    if (options.rate === 0) {options.isPaused = true;}
+    pause(options);
     updateRateCounter(options);
   });
   document.getElementById('buttonSlow').addEventListener('click', function () {
-    if (options.rateSetting > 0) {options.rateSetting--;}
+    if (options.rateSetting > 0) {
+      options.rateSetting--;
+    }
+    if (options.rateSetting === 0) {
+      pause(options);
+    } else {
+      if (options.isPaused === true) {
+        play(options);
+      }
+    }
+
     options.rate = options.simRates[options.rateSetting];
-    if (options.rate === 0) {options.isPaused = true;}
     updateRateCounter(options);
   });
   document.getElementById('buttonFast').addEventListener('click', function () {
     if (options.rateSetting < options.simRates.length - 1) {options.rateSetting++;}
-    if (options.isPaused === true) {options.isPaused = false;}
+    if (options.isPaused === true) {
+      play(options);
+    }
     options.rate = options.simRates[options.rateSetting];
     updateRateCounter(options);
   });
   document.getElementById('buttonMax').addEventListener('click', function () {
     options.rateSetting = options.simRates.length - 1;
-    if (options.isPaused === true) {options.isPaused = false;}
+    if (options.isPaused === true) {
+      play(options);
+    }
     options.rate = options.simRates[options.rateSetting];
     updateRateCounter(options);
   });
@@ -103,27 +132,25 @@ exports.addCraftListeners = (crafto, mapPan) => {
 };
 
 exports.addListeners = (options, mapPan, renderers, functions) => {
-  function pause() {
-    options.isPaused = true;
-    console.log('|| Unfocused');
-  }
-  function play() {
-    allowed = true;
-    if (options.rate !== 0) {options.isPaused = false;}
-    console.log('>> Focused');
-  }
 
-  window.addEventListener('blur', pause);
-  window.addEventListener('focus', play);
+  window.addEventListener('blur', function () {
+    if (!options.isPaused) {
+      options.rate = options.simRates[options.rateSetting];
+      pause(options);
+    }
+  });
+  // window.addEventListener('focus', function () {
+  //   play(options);
+  //   options.rate = options.simRates[options.rateSetting];
+  // });
   window.addEventListener('resize', function() {renderers.resizeWindow();});
-
-  let allowed = true;
 
   const checkKeyDown = (e) => {
     // console.log(e.code);
     if (e.repeat != undefined) {
       allowed = !event.repeat;
     }
+
     if (!allowed) return;
     allowed = false;
 
@@ -146,6 +173,12 @@ exports.addListeners = (options, mapPan, renderers, functions) => {
           mapPan.preppingWaypoint = true;
         }
         break;
+      case 'Space':
+        if (options.isPaused === false) {
+          pause(options);
+        } else {
+          play(options);
+        }
     }
   };
   const checkKeyUp = (e) => {

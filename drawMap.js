@@ -435,11 +435,54 @@ exports.updateWaypoints = (waypointList, mapPan) => {
     );
   });
 };
+exports.drawPausedSign = () => {
+  return (
+    ['g',
+      {
+        id: 'pausedSign',
+        visibility: 'hidden',
+        transform: 'translate(' + getPageWidth() / 2 + ', ' + (getPageHeight() - 60) + ')'
+      },
+      ['text', {
+        x: 0,
+        y: -40,
+        class: 'signText',
+        'text-anchor': 'middle'
+      },
+        'PAUSED'
+      ],
+      ['text', {
+        x: 0,
+        y: 0,
+        class: 'signTextSmall',
+        'text-anchor': 'middle'
+      },
+        'PRESS [SPACE] TO UNPAUSE'
+      ]
+      ,
+      ['text', {
+        x: 0,
+        y: -10,
+        class: 'signTextExtra',
+        'text-anchor': 'middle',
+        'xml:space': 'preserve'
+      },
+        '///////////////////////////////////////////////     ///////////////////////////////////////////////'
+      ]
+    ]
+  );
+};
+exports.updatePausedSign = () => {
+  document.getElementById('pausedSign').setAttribute(
+    'transform', 'translate(' + getPageWidth() / 2 + ', ' + (getPageHeight() - 60) + ')'
+  );
+};
 
 exports.drawPage = () => {
   return getSvg({w:getPageWidth(), h:getPageHeight() , i:'allTheStuff'}).concat([
     ['defs'],
 
+    ['g', {id: 'superUI'}],
     ['g', {id: 'map'},
       ['g', {id: 'grid'}],
       ['g', {id: 'gridEdge'}],

@@ -3,6 +3,7 @@ const renderer    = require('onml/renderer.js');
 const Stats       = require('stats.js');
 const advRenderer = require('./advRenderer.js');
 const hullTemps   = require('./hullTemp.js');
+const missileTemp = require('./missileTemp.js');
 const wepTemps    = require('./wepTemp.js');
 const drawMap     = require('./drawMap.js');
 const ui          = require('./ui.js');
@@ -27,17 +28,19 @@ const structNamer  = iDerGenGen('STRUCT');
 const structIDer   = iDerGenGen('S');
 
 Window.options = {
-  rate: 1,
   targetFrames: 60,
 
-  rateSetting: 3,
+  rate: 1,
   simRates: [0, 0.1, 0.5, 1, 2, 3, 4],
+  rateSetting: 3,
+  savedRateSetting: 3,
 
   grid: true,
   gridStep: 10,
   gridCrossSize: 5,
 
   keyPanStep: 50,
+  isPaused: false
 };
 const options = Window.options;
 
@@ -45,6 +48,7 @@ let craftList = [];
 let structList = [];
 let deadCraftList = [];
 let activeWepsList = [];
+let activeMissiles = [];
 let waypointList = [];
 let mapPan = {
   x: 0,
@@ -248,6 +252,8 @@ const makeStruct = (structo, name, id, mapID, loc, owner = 'player', kit) => {
       heading: 0,
       updateHeading: true,
 
+      cargo: {},
+
       owner: owner,
       waitCycle: 0 + initWait,
       render: false,
@@ -324,37 +330,76 @@ const makeWeps = (crafto, kit) => {
     if (!kit[idx]) {
       socket.empty = true;
     } else {
+      let wepTemp = wepTemps[kit[idx]]();
+
       let id = iDWepGen();
       let mapID = id;
 
-      let wepo = {
-        ...socket,
-        id: id,
-        mapID: mapID,
-        ...wepTemps[kit[idx]](),
-        reloadProg: 0,
-        counter: 0,
-        status: 'ready',
-        pulseProg: 0,
-        renderer: undefined,
-        host: crafto,
-        target: {},
-        empty: false
-      };
+      if (wepTemp.type === 'pulse') {
 
-      if (!wepsRangeInCraftoRanges(crafto, wepo)) {
-        crafto.ranges.push(wepo.range);
+        let wepo = {
+          ...socket,
+          id: id,
+          mapID: mapID,
+          ...wepTemp,
+          reloadProg: 0,
+          counter: 0,
+          status: 'ready',
+          pulseProg: 0,
+          renderer: undefined,
+          host: crafto,
+          target: {},
+          empty: false,
+          fireControl: function (wep, td) {wepsLanceFireAi(wep, td);}
+        };
+
+        if (!wepsRangeInCraftoRanges(crafto, wepo)) {
+          crafto.ranges.push(wepo.range);
+        }
+
+        advRenderer.appendRend('weps', (['g', {id: mapID}]));
+        wepo.renderer = function () {
+          advRenderer.normRend(mapID, drawMap.drawWep(wepo));
+        };
+        wepo.renderer();
+        hide(wepo.mapID);
+        crafto.weapons.push(wepo);
       }
+      if (wepTemp.type === 'launcher') {
+        let wepo = {
+          ...socket,
+          id: id,
+          mapID: mapID,
+          ...wepTemp,
+          reloadProg: 0,
+          counter: 0,
+          status: 'ready',
+          host: crafto,
+          target: {},
+          empty: false,
+          fireControl: function (wep, td) {wepsMiLaFireAi(wep, td);}
+        };
 
-      advRenderer.appendRend('weps', (['g', {id: mapID}]));
-      wepo.renderer = function () {
-        advRenderer.normRend(mapID, drawMap.drawWep(wepo));
-      };
-      wepo.renderer();
-      hide(wepo.mapID);
-      crafto.weapons.push(wepo);
+        if (!wepsRangeInCraftoRanges(crafto, wepo)) {
+          crafto.ranges.push(wepo.range);
+        }
+
+        crafto.weapons.push(wepo);
+      }
     }
   });
+
+  if (kit.ammo) {
+    Object.keys(kit.ammo).forEach(key => {
+      let ammoAmount = kit.ammo[key];
+      if ( ammoAmount > crafto.cargoCap) {
+        console.log(crafto.id + ' has more ammo assigned than ammo capacity.');
+        ammoAmount = crafto.cargoCap;
+      }
+      crafto.cargo[key] = ammoAmount;
+    });
+  }
+
 };
 const changeElementTT = (id, x, y) => {
   document.getElementById(id).setAttribute(
@@ -383,7 +428,7 @@ const updateWepLine = (wep) => {
   wepLine.setAttribute('x2', enemyo.loc.x * mapPan.zoom);
   wepLine.setAttribute('y2', enemyo.loc.y * mapPan.zoom);
 };
-const wepsFire = (wep, td) => {
+const wepsLanceFireAi = (wep, td) => {
   let crafto = wep.host;
   let enemyo = wep.target;
 
@@ -419,6 +464,39 @@ const wepsFire = (wep, td) => {
   }
 
 };
+const wepsMiLaFireAi = (miLa, td) => {
+  if (miLa.status !== 'empty') {
+    switch (miLa.status) {
+      case 'ready':
+        if (miLa.host.cargo.mslBeam && miLa.host.cargo.mslBeam > 0) {
+          launchMissile(miLa, 'mslBeam'); //launches a missile
+          miLa.status = 'reloading';
+          --miLa.host.cargo.mslBeam;
+        } else if (miLa.host.cargo.mslAoe && miLa.host.cargo.mslAoe > 0) {
+          launchMissile(miLa, 'mslAoe');
+          miLa.status = 'reloading';
+          --miLa.host.cargo.mslAoe;
+        } else {
+          miLa.status = 'empty';
+        }
+        break;
+      case 'reloading':
+        miLa.reloadProg += td;
+        if (miLa.reloadProg >= miLa.reloadTime) {
+          miLa.status = 'ready';
+          miLa.reloadProg = 0;
+        }
+        break;
+    }
+  }
+};
+const launchMissile = (miLa, type) => {
+  let crafto = miLa.host;
+  let enemyo = miLa.target;
+  let missileTemplate = missileTemp[type]();
+
+  console.log(missileTemplate);
+};
 const hide = (id) => {
   document.getElementById(id).style.visibility = "hidden";
 };
@@ -435,8 +513,10 @@ const killCraft = (crafto) => {
     remove(craftList, crafto);
     remove(crafto.team.members, crafto);
     crafto.weapons.forEach(wep => {
-      hide(wep.mapID);
-      hide(crafto.id + '-WEPRANGE');
+      if (wep.type === 'lance') {
+        hide(wep.mapID);
+        hide(crafto.id + '-WEPRANGE');
+      }
     });
     crafto.renderer();
 
@@ -445,7 +525,7 @@ const killCraft = (crafto) => {
 const craftAI = (crafto, workTime) => {
   calcMotion(crafto, workTime);
 };
-const wepsUI = (unito, workTime) => {
+const wepsAI = (unito, workTime) => {
   return unito.weapons.find(wep => {
     if (wep.status === 'ready' && unito.team.enemy.members.length > 0) {
       return unito.team.enemy.members.find(enemyo => {
@@ -453,16 +533,16 @@ const wepsUI = (unito, workTime) => {
         if (
           range < wep.range
         ) {
-          activeWepsList.push(wep);
+          if (wep.type === 'pulse') activeWepsList.push(wep);
           wep.target = enemyo;
-          wepsFire(wep, workTime);
+          wep.fireControl(wep, workTime);
           return wep.target;
         }
       });
     } else if (wep.status === 'firing') {
-      wepsFire(wep, workTime);
+      wep.fireControl(wep, workTime);
     } else if (wep.status === 'reloading') {
-      wepsFire(wep, workTime);
+      wep.fireControl(wep, workTime);
     }
   });
 };
@@ -550,6 +630,9 @@ const main = () => {
   let renderMain = mkRndr('content');
   renderMain(drawMap.drawPage());
 
+  let renderSuperUI = mkRndr('superUI');
+  renderSuperUI(drawMap.drawPausedSign());
+
   let renderRateCounter     = undefined;
   const initRateRenderer    = () => {
     renderRateCounter       = mkRndr('rateCounter');
@@ -567,12 +650,13 @@ const main = () => {
 
   makeManyCraft('arrow', 3, 'player', {0: 'Lance'});
   makeManyCraft('bolt', 2, 'player', {0: 'Lance'});
-  makeManyCraft('spear', 1, 'player', {0: 'Lance', 1:'SuperLance'});
+  makeManyCraft('spear', 1, 'player', {0: 'Lance', 1: 'SuperLance'});
   makeManyCraft('noise', 1, 'player', {});
+  makeManyCraft('lobber', 1, 'player', {0: 'MiLa', ammo: {mslBeam: 10}});
 
-  // makeManyCraft('swarmer', 15, 'enemy');
+  makeManyCraft('swarmer', 5, 'enemy', {0: 'MiniLance'});
 
-  makeAStruct('bastion', {x: 0, y:0}, 'enemy', {0: 'SuperLance'});
+  makeAStruct('bastion', {x:0, y:0}, 'enemy', {0: 'SuperLance', 1: 'MiLa', ammo: {mslBeam: 50}});
 
   const reReRenderScaleBar = (options, mapPan) => {
     renderGridScaleBar(drawMap.drawGridScaleBar(options, mapPan));
@@ -629,6 +713,8 @@ const main = () => {
     document.getElementById('allTheStuff').setAttribute('viewBox',
       [0, 0, getPageWidth() + 1, getPageHeight() + 1].join(' ')
     );
+    drawMap.updatePausedSign();
+    renderGridEdge(drawMap.drawGridEdge(mapPan, options));
     reRendScreenFrame();
   };
 
@@ -680,7 +766,7 @@ const main = () => {
       });
 
       [...craftList, ...structList].forEach(unito => {
-        wepsUI(unito, workTime);
+        wepsAI(unito, workTime);
       });
 
       deadCraftList.forEach(crafto => {

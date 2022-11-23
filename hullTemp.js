@@ -103,7 +103,7 @@ module.exports = {
     class: 'Swarmer',
     abr: 'SWM',
     type: 'combat',
-    cargoCap: 0,
+    cargoCap: 1,
     fuelCapacity: 50,
     fuelConsumption: 0.1,
     accel: 10,
@@ -123,11 +123,43 @@ module.exports = {
           ]
   }),
 
+  lobber: () => ({
+    class: 'Lobber',
+    abr: 'LOB',
+    type: 'combat',
+    cargoCap: 10,
+    fuelCapacity: 50,
+    fuelConsumption: 0.1,
+    accel: 5,
+    health: 5,
+    weaponsHardpoints: [
+      {
+        size: 3,
+        hx: 0,
+        hy: 0
+      }
+    ],
+    icon: ['g', {},
+            ['path', {
+              d: 'M 0, -5 L 3, -1 L 3, 1 L 0, 5 L -3, 1 L -3, -1 Z',
+              class: 'craftIcon'
+            }],
+            [
+              'circle',
+              {r : 2, cx:-3, cy: 0, class: 'craftIcon'}
+            ],
+            [
+              'circle',
+              {r : 2, cx:3, cy: 0, class: 'craftIcon'}
+            ]
+          ]
+  }),
+
   bastion: () => ({
     class: 'Bastion',
     abr: 'BST',
     type: 'combat',
-    cargoCap: 0,
+    cargoCap: 100,
     fuelCapacity: 0,
     fuelConsumption: 0,
     accel: 0,
@@ -135,6 +167,11 @@ module.exports = {
     weaponsHardpoints: [
       {
         size: 3,
+        hx: 0,
+        hy: 0
+      },
+      {
+        size: 1,
         hx: 0,
         hy: 0
       }

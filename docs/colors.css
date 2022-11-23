@@ -152,3 +152,24 @@ playerhtml, body {
   stroke-width: 0.5px;
   stroke: #ffffff;
 }
+.signText {
+  font: 10rem B612 Mono;
+  stroke: none;
+  fill: #ffffffff;
+  user-select: none;
+  opacity: 0.1
+}
+.signTextSmall {
+  font: 2.5rem B612 Mono;
+  stroke: none;
+  fill: #ffffffff;
+  user-select: none;
+  opacity: 0.1
+}
+.signTextExtra {
+  font: 12rem B612 Mono;
+  stroke: none;
+  fill: #ffffffff;
+  user-select: none;
+  opacity: 0.1;
+}
