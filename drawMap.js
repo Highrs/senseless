@@ -93,7 +93,7 @@ exports.drawStruct = (structo) => {
       ['text', {
         x: 5,
         y: 5,
-        class: 'craftIconText ' + structo.team.color +'Fill'
+        class: 'craftIconText'
       },
         structo.id
       ]

@@ -127,7 +127,7 @@ exports.drawStruct = (structo) => {
       ['text', {
         x: 5,
         y: 5,
-        class: 'craftIconText ' + structo.team.color +'Fill'
+        class: 'craftIconText'
       },
         structo.id
       ]
@@ -915,7 +915,7 @@ let mapPan = {
   zoomChange: 0,
   interceptUpdated: true,
   boxes: {
-    boxSettings: false,
+    boxSettings: true,
   },
   unitSelected: false,
   selectedUnit: undefined,
@@ -1346,7 +1346,7 @@ const launchMissile = (miLa, type) => {
   let enemyo = miLa.target;
   let missileTemplate = missileTemp[type]();
 
-  console.log(missileTemplate);
+  // console.log(missileTemplate);
 };
 const hide = (id) => {
   document.getElementById(id).style.visibility = "hidden";
@@ -1366,8 +1366,8 @@ const killCraft = (crafto) => {
     crafto.weapons.forEach(wep => {
       if (wep.type === 'lance') {
         hide(wep.mapID);
-        hide(crafto.id + '-WEPRANGE');
       }
+      hide(crafto.id + '-WEPRANGE');
     });
     crafto.renderer();
 
@@ -1581,6 +1581,7 @@ const main = () => {
       renderBoxSettings([]);
     }
   };
+  placecheckBoxSettings();
 
   let renderers = {
     resizeWindow: resizeWindow,
