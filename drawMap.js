@@ -25,21 +25,33 @@ exports.drawCraft = (crafto) => {
     ]]
   ];
 
+  let hardpoints = ['g', {}];
+  crafto.weapons.forEach(wep => {
+    console.log(wep);
+    if (wep.type === 'pulse') {
+      hardpoints.push(
+        ['circle', {cx: wep.hx, cy: wep.hy, r : wep.size, class: 'wepHardPointLance'}]
+      );
+    }
+  });
+
   drawnCraft.push(
     ['g', {
         transform: 'rotate(' + crafto.heading + ')',
         id: crafto.mapID + '-ROT',
         class: crafto.dead ? crafto.team.color + 'Dead' : crafto.team.color
       },
-      crafto.icon
+      crafto.icon,
+      hardpoints
     ]
   );
+
 
   if (!crafto.dead) {
     drawnCraft.push(
       ['text', {
-        x: 5,
-        y: 5,
+        x: 10,
+        y: 10,
         // class: 'craftIconText ' + crafto.team.color +'Fill'
         class: 'craftIconText'
       },
@@ -49,8 +61,8 @@ exports.drawCraft = (crafto) => {
   }
 
   drawnCraft.push(
-    icons.bracketSelected(crafto.id + '-SELECTED', 2),
-    icons.brackets(crafto.id + '-SELECTOR', 4)
+    icons.bracketSelected(crafto.id + '-SELECTED', 4),
+    icons.brackets(crafto.id + '-SELECTOR', 6)
   );
 
   return drawnCraft;
@@ -78,21 +90,32 @@ exports.drawStruct = (structo) => {
     throw 'No drawing instructions in hellTemp for ' + structo.class;
   }
 
+  let hardpoints = ['g', {}];
+  structo.weapons.forEach(wep => {
+    if (wep.type === 'pulse') {
+      hardpoints.push(
+        ['circle', {cx: wep.hx, cy: wep.hy, r : wep.size, class: 'wepHardPointLance'}]
+      );
+    }
+  });
+
   drawnStruct.push(
     ['g', {
         transform: 'rotate(' + structo.heading + ')',
         id: structo.mapID + '-ROT',
         class: structo.dead ? structo.team.color + 'Dead' : structo.team.color
       },
-      structo.icon
+      structo.icon,
+      hardpoints
     ]
   );
+
 
   if (!structo.dead) {
     drawnStruct.push(
       ['text', {
-        x: 5,
-        y: 5,
+        x: 20,
+        y: 15,
         class: 'craftIconText'
       },
         structo.id
@@ -101,11 +124,56 @@ exports.drawStruct = (structo) => {
   }
 
   drawnStruct.push(
-    icons.bracketSelected(structo.id + '-SELECTED', 2),
-    icons.brackets(structo.id + '-SELECTOR', 4)
+    icons.bracketSelected(structo.id + '-SELECTED', 10),
+    icons.brackets(structo.id + '-SELECTOR', 12)
   );
 
   return drawnStruct;
+};
+
+exports.drawMissile = (missileo) => {
+  let drawnCraft = ['g', {id: missileo.id},
+    ['line', {
+      id: missileo.mapID + '-VECT_LINE',
+      x1: 0,
+      y1: 0,
+      x2: 0,
+      y2: 0,
+      class: 'vector'
+    }],
+    ['g', {
+      transform: 'translate('+0+', '+0+')',
+      id: missileo.mapID + '-VECT_DOT'
+    }, [
+      'circle',
+      {r : 2, class: 'vector'}
+    ]]
+  ];
+
+  drawnCraft.push(
+    ['g', {
+        transform: 'rotate(' + missileo.heading + ')',
+        id: missileo.mapID + '-ROT',
+        class: missileo.dead ? missileo.team.color + 'Dead' : missileo.team.color
+      },
+      missileo.icon
+    ]
+  );
+
+  // drawnCraft.push(
+  //   icons.bracketSelected(missileo.id + '-SELECTED', 4),
+  //   icons.brackets(missileo.id + '-SELECTOR', 6)
+  // );
+
+  return drawnCraft;
+};
+exports.updateMissilePath = (missileo, mapPan) => {
+  let target = missileo.target;
+  let path = document.getElementById(missileo.mapID + '-PATH');
+  path.setAttribute('x1', missileo.loc.x * mapPan.zoom);
+  path.setAttribute('y1', missileo.loc.y * mapPan.zoom);
+  path.setAttribute('x2', target.loc.x * mapPan.zoom);
+  path.setAttribute('y2', target.loc.y * mapPan.zoom);
 };
 
 exports.updateSelector = (crafto) => {
@@ -142,6 +210,9 @@ exports.updateWepRanges = (crafto, mapPan) => {
 exports.drawCraftPath = (crafto) => {
   let drawnPath = ['g', {}];
 
+  let classType;
+  crafto.type === 'missile' ? classType = 'pathLineAttack' : classType = 'pathLine';
+
   drawnPath.push(
     ['line', {
       id: crafto.mapID + '-PATH',
@@ -149,7 +220,7 @@ exports.drawCraftPath = (crafto) => {
       y1: 0,
       x2: 100,
       y2: 100,
-      class: 'pathLine'
+      class: classType
     }]
   );
 
@@ -162,6 +233,22 @@ exports.updateCraftPath = (crafto, mapPan) => {
   path.setAttribute('y1', crafto.loc.y * mapPan.zoom);
   path.setAttribute('x2', waypointo.loc.x * mapPan.zoom);
   path.setAttribute('y2', waypointo.loc.y * mapPan.zoom);
+};
+exports.drawMissilePath = (missileo) => {
+  let drawnPath = ['g', {}];
+
+  drawnPath.push(
+    ['line', {
+      id: missileo.mapID + '-PATH',
+      x1: 0,
+      y1: 0,
+      x2: 100,
+      y2: 100,
+      class: 'pathLineAttack'
+    }]
+  );
+
+  return drawnPath;
 };
 
 exports.drawWep = (wepo) => {
@@ -491,11 +578,13 @@ exports.drawPage = () => {
         ['g', {id: 'sp-player'}],
         ['g', {id: 'sp-enemy'}]
       ],
+      ['g', {id: 'missilePaths'}],
       ['g', {id: 'craftPaths'}],
       ['g', {id: 'waypoints'}],
-      ['g', {id: 'weps'}],
       ['g', {id: 'structures'}],
-      ['g', {id: 'crafts'}]
+      ['g', {id: 'crafts'}],
+      ['g', {id: 'missiles'}],
+      ['g', {id: 'weps'}],
     ],
     ['g', {id: 'gridScaleBar'}],
     ['g', {id: 'screenFrame'}],

@@ -19,6 +19,10 @@ playerhtml, body {
   fill: #363636;
   stroke-width: 1px;
 }
+.craftIconDetail {
+  fill: #363636;
+  stroke-width: 0.5px;
+}
 .enemy {
   stroke: #ff3c3c;
 }
@@ -132,15 +136,15 @@ playerhtml, body {
   fill: #474747;
 }
 .gridBold {
-  stroke-width: 1px;
+  stroke-width: 0.5px;
   stroke: #a3a3a3ff;
   fill: none;
 }
 .vector {
   fill: none;
-  stroke-width: 1px;
   stroke: #ffffffff;
-  fill: none;
+  stroke-width: 0.5px;
+  stroke-dasharray: 2 2;
 }
 .dataText {
   font: 0.8rem B612 Mono;
@@ -149,8 +153,15 @@ playerhtml, body {
   user-select: none;
 }
 .pathLine {
-  stroke-width: 0.5px;
   stroke: #ffffff;
+  stroke-width: 1px;
+  stroke-dasharray: 10 2;
+}
+.pathLineAttack {
+  fill: none;
+  stroke: #ff0000;
+  stroke-width: 1px;
+  stroke-dasharray: 10 2;
 }
 .signText {
   font: 10rem B612 Mono;
@@ -172,4 +183,8 @@ playerhtml, body {
   fill: #ffffffff;
   user-select: none;
   opacity: 0.1;
+}
+.wepHardPointLance {
+  fill: #ffffffff;
+  stroke-width: 0px;
 }

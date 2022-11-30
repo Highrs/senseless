@@ -59,21 +59,33 @@ exports.drawCraft = (crafto) => {
     ]]
   ];
 
+  let hardpoints = ['g', {}];
+  crafto.weapons.forEach(wep => {
+    console.log(wep);
+    if (wep.type === 'pulse') {
+      hardpoints.push(
+        ['circle', {cx: wep.hx, cy: wep.hy, r : wep.size, class: 'wepHardPointLance'}]
+      );
+    }
+  });
+
   drawnCraft.push(
     ['g', {
         transform: 'rotate(' + crafto.heading + ')',
         id: crafto.mapID + '-ROT',
         class: crafto.dead ? crafto.team.color + 'Dead' : crafto.team.color
       },
-      crafto.icon
+      crafto.icon,
+      hardpoints
     ]
   );
+
 
   if (!crafto.dead) {
     drawnCraft.push(
       ['text', {
-        x: 5,
-        y: 5,
+        x: 10,
+        y: 10,
         // class: 'craftIconText ' + crafto.team.color +'Fill'
         class: 'craftIconText'
       },
@@ -83,8 +95,8 @@ exports.drawCraft = (crafto) => {
   }
 
   drawnCraft.push(
-    icons.bracketSelected(crafto.id + '-SELECTED', 2),
-    icons.brackets(crafto.id + '-SELECTOR', 4)
+    icons.bracketSelected(crafto.id + '-SELECTED', 4),
+    icons.brackets(crafto.id + '-SELECTOR', 6)
   );
 
   return drawnCraft;
@@ -112,21 +124,32 @@ exports.drawStruct = (structo) => {
     throw 'No drawing instructions in hellTemp for ' + structo.class;
   }
 
+  let hardpoints = ['g', {}];
+  structo.weapons.forEach(wep => {
+    if (wep.type === 'pulse') {
+      hardpoints.push(
+        ['circle', {cx: wep.hx, cy: wep.hy, r : wep.size, class: 'wepHardPointLance'}]
+      );
+    }
+  });
+
   drawnStruct.push(
     ['g', {
         transform: 'rotate(' + structo.heading + ')',
         id: structo.mapID + '-ROT',
         class: structo.dead ? structo.team.color + 'Dead' : structo.team.color
       },
-      structo.icon
+      structo.icon,
+      hardpoints
     ]
   );
+
 
   if (!structo.dead) {
     drawnStruct.push(
       ['text', {
-        x: 5,
-        y: 5,
+        x: 20,
+        y: 15,
         class: 'craftIconText'
       },
         structo.id
@@ -135,11 +158,56 @@ exports.drawStruct = (structo) => {
   }
 
   drawnStruct.push(
-    icons.bracketSelected(structo.id + '-SELECTED', 2),
-    icons.brackets(structo.id + '-SELECTOR', 4)
+    icons.bracketSelected(structo.id + '-SELECTED', 10),
+    icons.brackets(structo.id + '-SELECTOR', 12)
   );
 
   return drawnStruct;
+};
+
+exports.drawMissile = (missileo) => {
+  let drawnCraft = ['g', {id: missileo.id},
+    ['line', {
+      id: missileo.mapID + '-VECT_LINE',
+      x1: 0,
+      y1: 0,
+      x2: 0,
+      y2: 0,
+      class: 'vector'
+    }],
+    ['g', {
+      transform: 'translate('+0+', '+0+')',
+      id: missileo.mapID + '-VECT_DOT'
+    }, [
+      'circle',
+      {r : 2, class: 'vector'}
+    ]]
+  ];
+
+  drawnCraft.push(
+    ['g', {
+        transform: 'rotate(' + missileo.heading + ')',
+        id: missileo.mapID + '-ROT',
+        class: missileo.dead ? missileo.team.color + 'Dead' : missileo.team.color
+      },
+      missileo.icon
+    ]
+  );
+
+  // drawnCraft.push(
+  //   icons.bracketSelected(missileo.id + '-SELECTED', 4),
+  //   icons.brackets(missileo.id + '-SELECTOR', 6)
+  // );
+
+  return drawnCraft;
+};
+exports.updateMissilePath = (missileo, mapPan) => {
+  let target = missileo.target;
+  let path = document.getElementById(missileo.mapID + '-PATH');
+  path.setAttribute('x1', missileo.loc.x * mapPan.zoom);
+  path.setAttribute('y1', missileo.loc.y * mapPan.zoom);
+  path.setAttribute('x2', target.loc.x * mapPan.zoom);
+  path.setAttribute('y2', target.loc.y * mapPan.zoom);
 };
 
 exports.updateSelector = (crafto) => {
@@ -176,6 +244,9 @@ exports.updateWepRanges = (crafto, mapPan) => {
 exports.drawCraftPath = (crafto) => {
   let drawnPath = ['g', {}];
 
+  let classType;
+  crafto.type === 'missile' ? classType = 'pathLineAttack' : classType = 'pathLine';
+
   drawnPath.push(
     ['line', {
       id: crafto.mapID + '-PATH',
@@ -183,7 +254,7 @@ exports.drawCraftPath = (crafto) => {
       y1: 0,
       x2: 100,
       y2: 100,
-      class: 'pathLine'
+      class: classType
     }]
   );
 
@@ -196,6 +267,22 @@ exports.updateCraftPath = (crafto, mapPan) => {
   path.setAttribute('y1', crafto.loc.y * mapPan.zoom);
   path.setAttribute('x2', waypointo.loc.x * mapPan.zoom);
   path.setAttribute('y2', waypointo.loc.y * mapPan.zoom);
+};
+exports.drawMissilePath = (missileo) => {
+  let drawnPath = ['g', {}];
+
+  drawnPath.push(
+    ['line', {
+      id: missileo.mapID + '-PATH',
+      x1: 0,
+      y1: 0,
+      x2: 100,
+      y2: 100,
+      class: 'pathLineAttack'
+    }]
+  );
+
+  return drawnPath;
 };
 
 exports.drawWep = (wepo) => {
@@ -525,11 +612,13 @@ exports.drawPage = () => {
         ['g', {id: 'sp-player'}],
         ['g', {id: 'sp-enemy'}]
       ],
+      ['g', {id: 'missilePaths'}],
       ['g', {id: 'craftPaths'}],
       ['g', {id: 'waypoints'}],
-      ['g', {id: 'weps'}],
       ['g', {id: 'structures'}],
-      ['g', {id: 'crafts'}]
+      ['g', {id: 'crafts'}],
+      ['g', {id: 'missiles'}],
+      ['g', {id: 'weps'}],
     ],
     ['g', {id: 'gridScaleBar'}],
     ['g', {id: 'screenFrame'}],
@@ -560,23 +649,23 @@ module.exports = {
   arrow: () => ({
     class: 'Arrow',
     abr: 'ARR',
-    type: 'combat',
+    designation: 'combat',
     cargoCap: 1,
     fuelCapacity: 50,
     fuelConsumption: 0.1,
-    accel: 5,
+    accel: 10,
     home: 'astroDeltaB',
     health: 5,
     weaponsHardpoints: [
       {
         size: 2,
         hx: 0,
-        hy: 0
+        hy: 2
       }
     ],
     icon: ['g', {},
             ['path', {
-              d: 'M 0, 0 L  3,-3 L  0, 5 L -3,-3 Z',
+              d: 'M 0, -2 L  6,-6 L  0, 10 L -6,-6 Z',
               class: 'craftIcon'
             }]
           ]
@@ -585,7 +674,7 @@ module.exports = {
   bolt: () => ({
     class: 'Bolt',
     abr: 'BLT',
-    type: 'combat',
+    designation: 'combat',
     cargoCap: 1,
     fuelCapacity: 50,
     fuelConsumption: 0.1,
@@ -595,12 +684,12 @@ module.exports = {
       {
         size: 2,
         hx: 0,
-        hy: 0
+        hy: -4
       }
     ],
     icon: ['g', {},
             ['path', {
-              d: 'M 0,-5 L  3,-3 L  0, 5 L -3,-3 Z',
+              d: 'M 0,-10 L  6,-6 L  0, 10 L -6,-6 Z',
               class: 'craftIcon'
             }]
           ]
@@ -609,7 +698,7 @@ module.exports = {
   spear: () => ({
     class: 'Spear',
     abr: 'SPR',
-    type: 'combat',
+    designation: 'combat',
     cargoCap: 1,
     fuelCapacity: 50,
     fuelConsumption: 0.1,
@@ -619,7 +708,7 @@ module.exports = {
       {
         size: 2,
         hx: 0,
-        hy: 5
+        hy: 8
       },
       {
         size: 3,
@@ -629,7 +718,77 @@ module.exports = {
     ],
     icon: ['g', {},
             ['path', {
-              d: 'M 0,-5 L -2,-2 L -6, 0 L -3, 2 L -2, 5 L -1, 8 L 0, 10 L 1,8 L 2, 5 L 3, 2 L 6, 0 L 2,-2 Z',
+              d: 'M 0,-10 L -4,-4 L -12, 0 L -6, 4 L -2, 16 L 0, 20 L 2,16 L 6, 4 L 12, 0 L 4,-4 Z',
+              class: 'craftIcon'
+            }]
+          ]
+  }),
+
+  naught: () => ({
+    class: 'Naught',
+    abr: 'NGT',
+    designation: 'combat',
+    cargoCap: 1,
+    fuelCapacity: 50,
+    fuelConsumption: 0.1,
+    accel: 5,
+    health: 40,
+    weaponsHardpoints: [
+      {
+        size: 3,
+        hx: 0,
+        hy: 0
+      },
+      {
+        size: 3,
+        hx: 0,
+        hy: 8
+      },
+      {
+        size: 3,
+        hx: 0,
+        hy: 16
+      },
+      {
+        size: 2,
+        hx: 8,
+        hy: 4
+      },
+      {
+        size: 2,
+        hx: -8,
+        hy: 4
+      },
+      {
+        size: 2,
+        hx: 7,
+        hy: 23
+      },
+      {
+        size: 2,
+        hx: -7,
+        hy: 23
+      }
+    ],
+    icon: ['g', {},
+            ['path', {
+              d: 'M 0, -13 L 4, -17 L 7, -14 L 7, -11 L 5, -9 L 5, -6 L 7, -4 L 7, 23 L -7, 23 L -7, -4 L -5, -6 L -5, -9 L -7, -11 L -7, -14 L -4, -17 Z',
+              class: 'craftIcon'
+            }],
+            ['path', {
+              d: 'M 4,2 L 7,-1 L 9, -1 L 12, 2 L 12, 6 L 9, 9 L 8, 9 L 4, 6 Z',
+              class: 'craftIcon'
+            }],
+            ['path', {
+              d: 'M -4,2 L -7,-1 L -9, -1 L -12, 2 L -12, 6 L -9, 9 L -8, 9 L -4, 6 Z',
+              class: 'craftIcon'
+            }],
+            ['path', {
+              d: 'M 7,18 L 8,18 L 10,20 L 10, 25 L 9, 26 L 4, 26 L 2, 24 L 2, 23 Z',
+              class: 'craftIcon'
+            }],
+            ['path', {
+              d: 'M -7,18 L -8,18 L -10,20 L -10, 25 L -9, 26 L -4, 26 L -2, 24 L -2, 23 Z',
               class: 'craftIcon'
             }]
           ]
@@ -638,7 +797,7 @@ module.exports = {
   noise: () => ({
     class: 'Noise',
     abr: 'NIS',
-    type: 'combat',
+    designation: 'combat',
     cargoCap: 1,
     fuelCapacity: 50,
     fuelConsumption: 0.1,
@@ -647,12 +806,12 @@ module.exports = {
     weaponsHardpoints: [],
     icon: ['g', {},
             ['path', {
-              d: 'M 0, -5 L 2, -2 L 6, 0 L 2, 2 L -2, 2 L -6, 0 L -2, -2 Z',
+              d: 'M 0, -10 L 4, -4 L 12, 0 L 4, 4 L -4, 4 L -12, 0 L -4, -4 Z',
               class: 'craftIcon'
             }],
             [
               'circle',
-              {r : 2, cx:0, cy: 2, class: 'craftIcon'}
+              {r : 4, cx:0, cy: 4, class: 'craftIcon'}
             ]
           ]
   }),
@@ -660,7 +819,7 @@ module.exports = {
   swarmer: () => ({
     class: 'Swarmer',
     abr: 'SWM',
-    type: 'combat',
+    designation: 'combat',
     cargoCap: 1,
     fuelCapacity: 50,
     fuelConsumption: 0.1,
@@ -675,7 +834,7 @@ module.exports = {
     ],
     icon: ['g', {},
             ['path', {
-              d: 'M 0,3 L 3,0 L 0,-3 L -3,0 Z',
+              d: 'M 0,10 L 4,0 L 0,-8 L -4,0 Z',
               class: 'craftIcon'
             }]
           ]
@@ -684,8 +843,8 @@ module.exports = {
   lobber: () => ({
     class: 'Lobber',
     abr: 'LOB',
-    type: 'combat',
-    cargoCap: 10,
+    designation: 'combat',
+    cargoCap: 50,
     fuelCapacity: 50,
     fuelConsumption: 0.1,
     accel: 5,
@@ -699,16 +858,30 @@ module.exports = {
     ],
     icon: ['g', {},
             ['path', {
-              d: 'M 0, -5 L 3, -1 L 3, 1 L 0, 5 L -3, 1 L -3, -1 Z',
+              d: 'M 0, -10 L 4, -6 L 4, 11 L 0, 13 L -5, 13 L -5, 5 L -5, -5 Z',
               class: 'craftIcon'
             }],
+            // ['path', {
+            //   d: 'M 2, 0 L 2, -4 L 4,-6 L 8,-2 L 7,1 L 4,2 Z',
+            //   class: 'craftIcon'
+            // }],
+            // ['path', {
+            //   transform: 'translate(0,8)',
+            //   d: 'M 2, 0 L 2, -4 L 4,-6 L 8,-2 L 7,1 L 4,2 Z',
+            //   class: 'craftIcon'
+            // }],
+            // ['path', {
+            //   transform: 'translate(-1,11)',
+            //   d: 'M -2, 0 L -2, -4 L -4,-6 L -8,-2 L -7,1 L -4,2 Z',
+            //   class: 'craftIcon'
+            // }],
             [
               'circle',
-              {r : 2, cx:-3, cy: 0, class: 'craftIcon'}
+              {r : 5, cx:-5, cy: 0, class: 'craftIcon'}
             ],
             [
               'circle',
-              {r : 2, cx:3, cy: 0, class: 'craftIcon'}
+              {r : 2, cx:2, cy: 12, class: 'craftIcon'}
             ]
           ]
   }),
@@ -716,7 +889,7 @@ module.exports = {
   bastion: () => ({
     class: 'Bastion',
     abr: 'BST',
-    type: 'combat',
+    designation: 'combat',
     cargoCap: 100,
     fuelCapacity: 0,
     fuelConsumption: 0,
@@ -725,11 +898,51 @@ module.exports = {
     weaponsHardpoints: [
       {
         size: 3,
-        hx: 0,
-        hy: 0
+        hx: 2,
+        hy: 3
       },
       {
-        size: 1,
+        size: 3,
+        hx: 9,
+        hy: 3
+      },
+      {
+        size: 3,
+        hx: 5,
+        hy: 9
+      },
+      {
+        size: 2,
+        hx: 0,
+        hy: 25
+      },
+      {
+        size: 2,
+        hx: 5,
+        hy: 22
+      },
+      {
+        size: 2,
+        hx: -5,
+        hy: 22
+      },
+      {
+        size: 2,
+        hx: 0,
+        hy: -25
+      },
+      {
+        size: 2,
+        hx: 5,
+        hy: -22
+      },
+      {
+        size: 2,
+        hx: -5,
+        hy: -22
+      },
+      {
+        size: 2,
         hx: 0,
         hy: 0
       }
@@ -738,7 +951,57 @@ module.exports = {
             ['circle', {
               r: 20,
               class: 'craftIcon'
-            }]
+            }],
+            ['circle', {
+              cx: 5,
+              cy: 5,
+              r: 10,
+              class: 'craftIconDetail'
+            }],
+            ['g', {transform: 'rotate(0)'},
+              ['path', {
+                d: 'M -10, 17 L 10, 17 L 10, 25 L 5, 30 L -5, 30 L -10, 25 Z',
+                class: 'craftIconDetail'
+              }]
+            ],
+            ['g', {transform: 'rotate(180)'},
+              ['path', {
+                d: 'M -10, 17 L 10, 17 L 10, 25 L 5, 30 L -5, 30 L -10, 25 Z',
+                class: 'craftIconDetail'
+              }]
+            ],
+            ['g', {transform: 'rotate(80)'},
+              ['circle', {
+                r: 10,
+                cx: 0,
+                cy: 30,
+                class: 'craftIconDetail'
+              }],
+              ['path', {
+                d: 'M -10, 17 L 10, 17 L 10, 30 L -10, 30 Z',
+                class: 'craftIconDetail'
+              }],
+              ['path', {
+                d: 'M -5, 20 L 15, 20 L 15, 28 L -5, 28 Z',
+                class: 'craftIconDetail'
+              }]
+            ],
+            ['g', {transform: 'rotate(260)'},
+              ['circle', {
+                r: 5,
+                cx: -5,
+                cy: 25,
+                class: 'craftIconDetail'
+              }],
+              ['path', {
+                d: 'M -10, 17 L 10, 17 L 10, 25 L -10, 25 Z',
+                class: 'craftIconDetail'
+              }],
+              ['path', {
+                d: 'M 5, 25 L 8, 25 L 8, 85 L 5, 85 Z',
+                class: 'craftIconDetail'
+              }]
+            ]
           ]
   })
 };
@@ -781,7 +1044,7 @@ module.exports = {
       // }],
       ['text', {
         x: corner,
-        y: corner+5,
+        y: corner+10,
         class: 'craftIconText'
       },
         'CTRL+LMB to move'
@@ -878,6 +1141,8 @@ const craftIDer   = iDerGenGen('C');
 const structNamer  = iDerGenGen('STRUCT');
 const structIDer   = iDerGenGen('S');
 
+const missileIDer   = iDerGenGen('M');
+
 Window.options = {
   targetFrames: 60,
 
@@ -930,7 +1195,7 @@ let mapPan = {
 const spawnPoints = {
   'player':  {
     side: 'player',
-    loc: {x: 150, y: 150, z: 0},
+    loc: {x: 160, y: 160, z: 0},
     r: 50,
     vec: {x:0, y:0},
     heading: 135,
@@ -938,17 +1203,18 @@ const spawnPoints = {
   'enemy':    {
     side: 'enemy',
     loc: {x: -150, y: -150, z: 0},
-    r: 100,
+    r: 80,
     vec:{x:0, y:0,},
-    heading: -135,
+    heading: 315,
     renderer: undefined}
 };
 const teams = {
-  player: {color: 'player', spawnPoint: spawnPoints.player,  members: [], enemy: undefined, kills: 0, losses: 0},
-  enemy:   {color: 'enemy',   spawnPoint: spawnPoints.enemy,    members: [], enemy: undefined, kills: 0, losses: 0}
+  player: {color: 'player', spawnPoint: spawnPoints.player, members: [], munitions: [], enemy: undefined, kills: 0, losses: 0},
+  enemy:   {color: 'enemy', spawnPoint: spawnPoints.enemy, members: [], munitions: [], enemy: undefined, kills: 0, losses: 0}
 };
 teams.player.enemy = teams.enemy;
 teams.enemy.enemy = teams.player;
+
 function rand(mean, deviation, prec = 0, upper = Infinity, lower = -Infinity) {
   let max = mean + deviation > upper ? upper : mean + deviation;
   let min = mean - deviation < lower ? lower : mean - deviation;
@@ -1028,11 +1294,11 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player', kit) => {
       owner: owner,
       waitCycle: 0 + initWait,
       render: false,
-      visible: true,
-
-      state: 'normal'
+      visible: true
     }
   );
+
+  makeWeps(newCrafto, kit);
 
   advRenderer.appendRend('crafts', (['g', {id: mapID}]));
   advRenderer.appendRend('wepsRanges', (['g', {id: mapID + '-WEPS-RANGE'}]));
@@ -1049,7 +1315,6 @@ const makeCraft = (crafto, name, id, mapID, owner = 'player', kit) => {
     drawMap.updateSelector(newCrafto);
   };
 
-  makeWeps(newCrafto, kit);
 
   const spawnPoint = newCrafto.team.spawnPoint;
 
@@ -1108,11 +1373,11 @@ const makeStruct = (structo, name, id, mapID, loc, owner = 'player', kit) => {
       owner: owner,
       waitCycle: 0 + initWait,
       render: false,
-      visible: true,
-
-      state: 'normal'
+      visible: true
     }
   );
+
+  makeWeps(newStructo, kit);
 
   advRenderer.appendRend('structures', (['g', {id: mapID}]));
   advRenderer.appendRend('wepsRanges', (['g', {id: mapID + '-WEPS-RANGE'}]));
@@ -1127,7 +1392,6 @@ const makeStruct = (structo, name, id, mapID, loc, owner = 'player', kit) => {
     drawMap.updateSelector(newStructo);
   };
 
-  makeWeps(newStructo, kit);
 
   const spawnPoint = newStructo.team.spawnPoint;
 
@@ -1290,13 +1554,16 @@ const wepsLanceFireAi = (wep, td) => {
       enemyo.health -= wep.damage;
       wep.status = 'firing';
       wep.counter += 1;
+      document.getElementById(wep.mapID).setAttribute('opacity', 1);
       console.log(crafto.id + ' fires on ' + enemyo.id + ',  HP:' + enemyo.health);
 
-      if (enemyo.health <= 0) {killCraft(enemyo);}
+      if (enemyo.health <= 0) {kill(enemyo);}
 
       break;
     case 'firing':
       wep.pulseProg += td;
+      document.getElementById(wep.mapID).setAttribute('opacity', ((wep.pulseTime - wep.pulseProg) / wep.pulseTime));
+
       if (wep.pulseProg >= wep.pulseTime) {
         remove(activeWepsList, wep);
         wep.status = 'reloading';
@@ -1344,15 +1611,87 @@ const wepsMiLaFireAi = (miLa, td) => {
 const launchMissile = (miLa, type) => {
   let crafto = miLa.host;
   let enemyo = miLa.target;
+  let owner = crafto.owner;
+
   let missileTemplate = missileTemp[type]();
 
-  // console.log(missileTemplate);
+  let id = missileIDer();
+  const mapID = id + '-MID';
+
+  let newMissile = Object.assign(
+    missileTemplate,
+    {
+      id: owner[0] + id,
+      mapID: mapID,
+      type: 'missile',
+      warheadType: type,
+      target: enemyo,
+
+      renderer: undefined,
+      wepsRangeRenderer: undefined,
+
+      selected: false,
+      updateSelector: undefined,
+
+      mobile: true,
+
+      loc: {x: 0, y: 0, z: 0},
+      vec: {x: 0, y: 0, z: 0},
+      team: teams[owner],
+
+      selectorsNeedUpdating: true,
+      courseChange: true,
+
+      status: 'normal',
+      dead: false,
+
+      speed: 0,
+
+      heading: 0,
+      updateHeading: true,
+
+      accelStat: 0,
+      cargo: {},
+      fuel: crafto.fuelCapacity,
+      owner: owner,
+      waitCycle: 0,
+      render: false,
+      visible: true
+    }
+  );
+
+  advRenderer.appendRend('missiles', (['g', {id: mapID}]));
+  advRenderer.appendRend('missilePaths', drawMap.drawMissilePath(newMissile));
+
+  newMissile.renderer = function () {
+    advRenderer.normRend(mapID, drawMap.drawMissile(newMissile));
+  };
+  // newMissile.updateSelector = function () {
+  //   drawMap.updateSelector(newMissile);
+  // };
+
+  newMissile.loc.x = crafto.loc.x;
+  newMissile.loc.y = crafto.loc.y;
+
+  newMissile.heading = crafto.heading;
+
+  activeMissiles.push(newMissile);
+  teams[owner].munitions.push(newMissile);
+
+  newMissile.renderer();
+
+  return newMissile;
 };
 const hide = (id) => {
   document.getElementById(id).style.visibility = "hidden";
 };
 const unhide = (id) => {
   document.getElementById(id).style.visibility = "visible";
+};
+const kill = (targeto) => {
+  if (targeto.type === 'missile') killMissile(targeto);
+  if (targeto.type === 'craft') killCraft(targeto);
+  if (targeto.type === 'structure') killStruct(targeto);
 };
 const killCraft = (crafto) => {
     removeWaypoint(crafto);
@@ -1364,7 +1703,7 @@ const killCraft = (crafto) => {
     remove(craftList, crafto);
     remove(crafto.team.members, crafto);
     crafto.weapons.forEach(wep => {
-      if (wep.type === 'lance') {
+      if (wep.type === 'pulse') {
         hide(wep.mapID);
       }
       hide(crafto.id + '-WEPRANGE');
@@ -1373,13 +1712,72 @@ const killCraft = (crafto) => {
 
     console.log(crafto.id + ' destroyed');
 };
+const killStruct = (structo) => {
+    structo.dead = true;
+    structo.team.losses += 1;
+    structo.team.enemy.kills += 1;
+
+    remove(structList, structo);
+    remove(structo.team.members, structo);
+    structo.weapons.forEach(wep => {
+      if (wep.type === 'pulse') {
+        hide(wep.mapID);
+      }
+      hide(structo.id + '-WEPRANGE');
+    });
+    structo.renderer();
+
+    console.log(structo.id + ' destroyed');
+};
+const killMissile = (missileo) => {
+    missileo.dead = true;
+    // crafto.team.losses += 1;
+    // crafto.team.enemy.kills += 1;
+
+    remove(activeMissiles, missileo);
+    remove(missileo.team.munitions, missileo);
+    hide(missileo.mapID + '-PATH');
+    advRenderer.normRend(missileo.mapID, []);
+
+    console.log(missileo.id + ' destroyed');
+};
+
 const craftAI = (crafto, workTime) => {
   calcMotion(crafto, workTime);
+};
+const missileAI = (missileo, workTime) => {
+
+  let relX = missileo.target.loc.x - missileo.loc.x;
+  let relY = missileo.target.loc.y - missileo.loc.y;
+
+  let newHeadingRad = ( Math.atan2(relY, relX) - (90 * Math.PI / 180));
+  let newHeadingDeg = ( newHeadingRad * (180 / Math.PI) );
+
+  missileo.vec.x = Math.sin(-newHeadingRad) * missileo.accel;
+  missileo.vec.y = Math.cos(newHeadingRad) * missileo.accel;
+
+  missileo.updateHeading = true;
+  missileo.heading = newHeadingDeg;
+  missileo.courseChange = false;
+
+
+  ['x', 'y'].forEach(e => {
+      missileo.loc[e] += missileo.vec[e] * workTime;
+  });
+
+  if (calcRange(missileo.loc, missileo.target.loc) < (missileo.range)) {
+    missileo.target.health -= missileo.damage;
+    if (missileo.target.health <= 0) {killCraft(missileo.target);}
+    remove(activeMissiles, missileo);
+    remove(missileo.team.munitions, missileo);
+    hide(missileo.mapID + '-PATH');
+    advRenderer.normRend(missileo.mapID, []);
+  }
 };
 const wepsAI = (unito, workTime) => {
   return unito.weapons.find(wep => {
     if (wep.status === 'ready' && unito.team.enemy.members.length > 0) {
-      return unito.team.enemy.members.find(enemyo => {
+      return [...unito.team.enemy.members, ...unito.team.enemy.munitions].find(enemyo => {
         let range = calcRange(unito.loc, enemyo.loc);
         if (
           range < wep.range
@@ -1499,15 +1897,38 @@ const main = () => {
   let renderBoxSettings     = mkRndr('boxMainSettings');
   let renderWaypoints       = mkRndr('waypoints');
 
-  makeManyCraft('arrow', 3, 'player', {0: 'Lance'});
+  makeManyCraft('arrow', 2, 'player', {0: 'Lance'});
   makeManyCraft('bolt', 2, 'player', {0: 'Lance'});
-  makeManyCraft('spear', 1, 'player', {0: 'Lance', 1: 'SuperLance'});
-  makeManyCraft('noise', 1, 'player', {});
-  makeManyCraft('lobber', 1, 'player', {0: 'MiLa', ammo: {mslBeam: 10}});
+  makeManyCraft('spear', 2, 'player', {0: 'Lance', 1: 'SuperLance'});
+  // makeManyCraft('noise', 1, 'player', {});
+  makeManyCraft('lobber', 1, 'player', {0: 'MiLa', ammo: {mslBeam: 50}});
+  makeManyCraft('naught', 1, 'player', {
+    0: 'SuperLance',
+    1: 'SuperLance',
+    2: 'SuperLance',
+    3: 'Lance',
+    4: 'Lance',
+    5: 'Lance',
+    6: 'Lance'
+  });
 
-  makeManyCraft('swarmer', 5, 'enemy', {0: 'MiniLance'});
 
-  makeAStruct('bastion', {x:0, y:0}, 'enemy', {0: 'SuperLance', 1: 'MiLa', ammo: {mslBeam: 50}});
+
+  // makeManyCraft('swarmer', 5, 'enemy', {0: 'MiniLance'});
+
+  makeAStruct('bastion', {x:0, y:0}, 'enemy', {
+    0: 'SuperLance',
+    1: 'SuperLance',
+    2: 'SuperLance',
+    3: 'Lance',
+    4: 'Lance',
+    5: 'Lance',
+    6: 'Lance',
+    7: 'Lance',
+    8: 'Lance',
+    9: 'MiLa',
+    ammo: {mslBeam: 50}
+  });
 
   const reReRenderScaleBar = (options, mapPan) => {
     renderGridScaleBar(drawMap.drawGridScaleBar(options, mapPan));
@@ -1517,7 +1938,10 @@ const main = () => {
     renderGridEdge(drawMap.drawGridEdge(mapPan, options));
   };
 
-  [...craftList, ...structList].forEach(crafto => {
+  [
+    ...craftList,
+    ...structList
+  ].forEach(crafto => {
     crafto.renderer();
     crafto.wepsRangeRenderer();
     if (crafto.team !== teams.enemy) {ui.addCraftListeners(crafto, mapPan);}
@@ -1617,6 +2041,10 @@ const main = () => {
         craftAI(unito, workTime);
       });
 
+      [...activeMissiles].forEach(missileo => {
+        missileAI(missileo, workTime);
+      });
+
       [...craftList, ...structList].forEach(unito => {
         wepsAI(unito, workTime);
       });
@@ -1662,7 +2090,7 @@ const main = () => {
         ...structList
       ].forEach(e => {
         changeElementTT(e.mapID, e.loc.x * mapPan.zoom, e.loc.y * mapPan.zoom);
-        if (e.selectorsNeedUpdating) {
+        if (e.selectorsNeedUpdating && e.type) {
           e.updateSelector();
           e.selectorsNeedUpdating = false;
         }
@@ -1684,6 +2112,19 @@ const main = () => {
         changeElementTT(crafto.mapID, crafto.loc.x * mapPan.zoom, crafto.loc.y * mapPan.zoom);
       });
 
+      [
+        ...activeMissiles
+      ].forEach(e => {
+        changeElementTT(e.mapID, e.loc.x * mapPan.zoom, e.loc.y * mapPan.zoom);
+
+        if (e.updateHeading) {
+          e.updateHeading = false;
+          drawMap.updateCraft(e);
+        }
+        drawMap.updateMissilePath(e, mapPan);
+
+      });
+
       mapPan.someMapUpdate = false;
     }
 
@@ -1702,7 +2143,7 @@ module.exports = {
   mslBeam: () => ({
     warhead: 'beam',
     damage: 10,
-    range: 110,
+    range: 90,
     pulseTime: 0.100,
     color: "wepFire0",
     abr: 'MSL-B',
@@ -1710,16 +2151,16 @@ module.exports = {
     health: 1,
     icon: ['g', {},
             ['path', {
-              d: 'M 0,0 L 2,-4 L 2,0 L 0,4 L -2,0 L -2,-4',
+              d: 'M 0,0 L 3,-6 L 3,0 L 0,6 L -3,0 L -3,-6 Z',
               class: 'craftIcon'
             }],
             ['path', {
-              d: 'M 2,0 L 4,4',
+              d: 'M 3,0 L 6,6',
               class: 'craftIcon'
             }]
             ,
             ['path', {
-              d: 'M -2,0 L -4,4',
+              d: 'M -3,0 L -6,6',
               class: 'craftIcon'
             }]
           ]

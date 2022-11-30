@@ -2,7 +2,7 @@ module.exports = {
   mslBeam: () => ({
     warhead: 'beam',
     damage: 10,
-    range: 110,
+    range: 90,
     pulseTime: 0.100,
     color: "wepFire0",
     abr: 'MSL-B',
@@ -10,16 +10,16 @@ module.exports = {
     health: 1,
     icon: ['g', {},
             ['path', {
-              d: 'M 0,0 L 2,-4 L 2,0 L 0,4 L -2,0 L -2,-4',
+              d: 'M 0,0 L 3,-6 L 3,0 L 0,6 L -3,0 L -3,-6 Z',
               class: 'craftIcon'
             }],
             ['path', {
-              d: 'M 2,0 L 4,4',
+              d: 'M 3,0 L 6,6',
               class: 'craftIcon'
             }]
             ,
             ['path', {
-              d: 'M -2,0 L -4,4',
+              d: 'M -3,0 L -6,6',
               class: 'craftIcon'
             }]
           ]

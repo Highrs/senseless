@@ -35,7 +35,7 @@ module.exports = {
       // }],
       ['text', {
         x: corner,
-        y: corner+5,
+        y: corner+10,
         class: 'craftIconText'
       },
         'CTRL+LMB to move'
