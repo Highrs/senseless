@@ -24,7 +24,7 @@ playerhtml, body {
   stroke-width: 0.5px;
 }
 .enemy {
-  stroke: #ff3c3c;
+  stroke: #ff4040;
 }
 .player {
   stroke: #00ff66;
@@ -41,9 +41,8 @@ playerhtml, body {
   stroke-dasharray: 1 10;
 }
 .wepsRangeCircle {
-  fill: none;
   fill-opacity: 0.01;
-  stroke-width: 0.15px;
+  stroke-width: 0.2px;
   stroke-dasharray: 10 5;
 }
 .wepFire0 {
@@ -160,7 +159,7 @@ playerhtml, body {
 .pathLineAttack {
   fill: none;
   stroke: #ff0000;
-  stroke-width: 1px;
+  stroke-width: 0.5px;
   stroke-dasharray: 10 2;
 }
 .signText {

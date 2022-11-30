@@ -189,11 +189,16 @@ exports.drawWepRanges = (crafto, mapPan) => {
   let drawnRanges = ['g', {id: crafto.id + '-WEPRANGE'}];
   let i = 0;
   crafto.ranges.forEach(range => {
-    drawnRanges.push(['circle', {
-      r: range * mapPan.zoom,
-      id: crafto.id + '-WEPRANGE-' + i,
-      class: 'wepsRangeCircle ' + crafto.team.color + ' ' + crafto.team.color +'Fill'
-    }]);
+    drawnRanges.push(
+      ['g', {
+        class: 'wepsRangeCircle ' + crafto.team.color + ' ' + crafto.team.color +'Fill'
+      },
+        ['circle', {
+          r: range * mapPan.zoom,
+          id: crafto.id + '-WEPRANGE-' + i,
+          fill: 'url(#WepsRangeGradient' + crafto.team.color[0].toUpperCase() + ')'
+        }]
+      ]);
     i++;
   });
   return drawnRanges;
@@ -567,7 +572,19 @@ exports.updatePausedSign = () => {
 
 exports.drawPage = () => {
   return getSvg({w:getPageWidth(), h:getPageHeight() , i:'allTheStuff'}).concat([
-    ['defs'],
+    ['defs',
+      ['radialGradient', {id: "WepsRangeGradientP", cx: 0.5, cy: 0.5, r: .5, fx: 0.5, fy: 0.5},
+        ['stop', {offset: "80%", 'stop-color': '#00ff66', 'stop-opacity': 0 }],
+        ['stop', {offset: "90%", 'stop-color': '#00ff66', 'stop-opacity': 0.2 }],
+        ['stop', {offset: "100%", 'stop-color': '#00ff66', 'stop-opacity':    1 }]
+      ],
+      ['radialGradient', {id: "WepsRangeGradientE", cx: 0.5, cy: 0.5, r: .5, fx: 0.5, fy: 0.5},
+        ['stop', {offset: "80%", 'stop-color': '#ff7c7c', 'stop-opacity': 0 }],
+        ['stop', {offset: "90%", 'stop-color': '#ff7c7c', 'stop-opacity': 0.2 }],
+        ['stop', {offset: "100%", 'stop-color': '#ff7c7c', 'stop-opacity':    1 }]
+      ]
+
+    ],
 
     ['g', {id: 'superUI'}],
     ['g', {id: 'map'},
