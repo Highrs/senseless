@@ -1180,6 +1180,7 @@ const options = Window.options;
 let craftList = [];
 let structList = [];
 let deadCraftList = [];
+let deadStructList = [];
 let activeWepsList = [];
 let activeMissiles = [];
 let waypointList = [];
@@ -1734,6 +1735,7 @@ const killStruct = (structo) => {
     structo.team.losses += 1;
     structo.team.enemy.kills += 1;
 
+    deadStructList.push(structo);
     remove(structList, structo);
     remove(structo.team.members, structo);
     structo.weapons.forEach(wep => {
@@ -2125,7 +2127,7 @@ const main = () => {
         }
       });
 
-      deadCraftList.forEach(crafto => {
+      [...deadCraftList, ...deadStructList].forEach(crafto => {
         changeElementTT(crafto.mapID, crafto.loc.x * mapPan.zoom, crafto.loc.y * mapPan.zoom);
       });
 
